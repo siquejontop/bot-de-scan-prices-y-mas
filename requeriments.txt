@@ -9,5 +9,3 @@ gunicorn
 eventlet
 openai
 pytesseract
-Pillow
-aiohttp
