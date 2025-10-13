@@ -7,27 +7,8 @@ import pyfiglet
 import os
 from flask import Flask
 from threading import Thread
-import openai  # 🧠 NUEVO
-import pytesseract  # 🔹 NUEVO
-import subprocess  # ⚙️ NUEVO para instalar Tesseract
-
-# ==========================
-# ⚙️ Verificar e instalar Tesseract (solo si falta)
-# ==========================
-def ensure_tesseract_installed():
-    """Instala Tesseract automáticamente en Render si no existe."""
-    if not os.path.exists("/usr/bin/tesseract"):
-        print("⚙️ Tesseract no encontrado. Instalando...")
-        try:
-            subprocess.run(["apt-get", "update"], check=True)
-            subprocess.run(["apt-get", "install", "-y", "tesseract-ocr"], check=True)
-            print("✅ Tesseract instalado correctamente.")
-        except Exception as e:
-            print(f"❌ Error instalando Tesseract: {e}")
-    else:
-        print("✅ Tesseract ya está instalado.")
-
-ensure_tesseract_installed()
+import openai
+import pytesseract
 
 # ==========================
 # 🔹 Configuración Tesseract
@@ -38,12 +19,11 @@ pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 # 🔑 TOKENS
 # ==========================
 TOKEN = os.getenv("DISCORD_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  
-
-openai.api_key = OPENAI_API_KEY  
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+openai.api_key = OPENAI_API_KEY
 
 # ==========================
-# 🌐 KEEP ALIVE
+# 🌐 KEEP ALIVE (para Render)
 # ==========================
 app = Flask('')
 
@@ -56,7 +36,7 @@ def health():
     return "OK", 200
 
 def run_flask():
-    port = int(os.environ.get("PORT", 8080))
+    port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
 def keep_alive():
@@ -64,7 +44,7 @@ def keep_alive():
     t.start()
 
 # ==========================
-# 🎨 CONFIG LOGGING
+# 🎨 CONFIGURACIÓN DE LOGGING
 # ==========================
 log_colors = {
     'DEBUG': 'cyan',
@@ -89,6 +69,7 @@ file_handler.setFormatter(file_formatter)
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
 
+# Evita duplicados de handlers
 if not logger.hasHandlers():
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
@@ -98,7 +79,7 @@ else:
     logger.addHandler(console_handler)
 
 # ==========================
-# 🤖 BOT CLASS
+# 🤖 CONFIGURACIÓN DEL BOT
 # ==========================
 intents = discord.Intents.all()
 
@@ -131,7 +112,7 @@ class MyBot(commands.Bot):
 bot = MyBot(command_prefix=",", intents=intents)
 
 # ==========================
-# 📡 BOT EVENTS
+# 📡 EVENTOS DEL BOT
 # ==========================
 @bot.event
 async def on_connect():
@@ -148,7 +129,7 @@ async def on_ready():
     logger.info(f"✅ Bot conectado como {bot.user} (ID: {bot.user.id})")
 
 # ==========================
-# 📡 ERROR HANDLER GLOBAL
+# ⚠️ MANEJO GLOBAL DE ERRORES
 # ==========================
 @bot.event
 async def on_command_error(ctx, error):
@@ -189,7 +170,7 @@ async def on_command_error(ctx, error):
     await ctx.send(embed=embed)
 
 # ==========================
-# 🚀 INICIO
+# 🚀 INICIO DEL BOT
 # ==========================
 keep_alive()
 bot.run(TOKEN)
