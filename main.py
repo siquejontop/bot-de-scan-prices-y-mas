@@ -9,6 +9,25 @@ from flask import Flask
 from threading import Thread
 import openai
 import pytesseract
+import subprocess
+
+# ==========================
+# ⚙️ Verificar e instalar Tesseract (solo si falta)
+# ==========================
+def ensure_tesseract_installed():
+    """Instala Tesseract automáticamente en Render si no existe."""
+    if not os.path.exists("/usr/bin/tesseract"):
+        print("⚙️ Tesseract no encontrado. Instalando...")
+        try:
+            subprocess.run(["apt-get", "update"], check=True)
+            subprocess.run(["apt-get", "install", "-y", "tesseract-ocr"], check=True)
+            print("✅ Tesseract instalado correctamente.")
+        except Exception as e:
+            print(f"❌ Error instalando Tesseract: {e}")
+    else:
+        print("✅ Tesseract ya está instalado.")
+
+ensure_tesseract_installed()
 
 # ==========================
 # 🔹 Configuración Tesseract
@@ -20,6 +39,7 @@ pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 # ==========================
 TOKEN = os.getenv("DISCORD_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
 openai.api_key = OPENAI_API_KEY
 
 # ==========================
@@ -44,7 +64,7 @@ def keep_alive():
     t.start()
 
 # ==========================
-# 🎨 CONFIGURACIÓN DE LOGGING
+# 🎨 CONFIG LOGGING
 # ==========================
 log_colors = {
     'DEBUG': 'cyan',
@@ -69,7 +89,6 @@ file_handler.setFormatter(file_formatter)
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
 
-# Evita duplicados de handlers
 if not logger.hasHandlers():
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
@@ -79,7 +98,7 @@ else:
     logger.addHandler(console_handler)
 
 # ==========================
-# 🤖 CONFIGURACIÓN DEL BOT
+# 🤖 BOT CLASS
 # ==========================
 intents = discord.Intents.all()
 
@@ -89,13 +108,12 @@ class MyBot(commands.Bot):
         self.ready_once = False
 
     async def setup_hook(self):
-        from cogs.hits import HitsButtonsES, HitsButtonsEN
+        # 🔹 Quitamos las referencias a cogs.hits (no existe en Render)
         if not hasattr(self, "views_loaded"):
-            self.add_view(HitsButtonsES(self))
-            self.add_view(HitsButtonsEN(self))
             self.views_loaded = True
-            logger.info("🎛️ Views registradas correctamente")
+            logger.info("🎛️ Views cargadas (sin hits.py por ahora)")
 
+        # Cogs activos
         cogs = [
             "cogs.brainrotcalc",
             "cogs.scan",
@@ -112,7 +130,7 @@ class MyBot(commands.Bot):
 bot = MyBot(command_prefix=",", intents=intents)
 
 # ==========================
-# 📡 EVENTOS DEL BOT
+# 📡 BOT EVENTS
 # ==========================
 @bot.event
 async def on_connect():
@@ -129,7 +147,7 @@ async def on_ready():
     logger.info(f"✅ Bot conectado como {bot.user} (ID: {bot.user.id})")
 
 # ==========================
-# ⚠️ MANEJO GLOBAL DE ERRORES
+# 📡 ERROR HANDLER GLOBAL
 # ==========================
 @bot.event
 async def on_command_error(ctx, error):
@@ -170,7 +188,7 @@ async def on_command_error(ctx, error):
     await ctx.send(embed=embed)
 
 # ==========================
-# 🚀 INICIO DEL BOT
+# 🚀 INICIO
 # ==========================
 keep_alive()
 bot.run(TOKEN)
