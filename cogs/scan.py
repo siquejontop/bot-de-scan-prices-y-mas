@@ -32,33 +32,33 @@ class Scan(commands.Cog):
                 scale = max_dim / max(h, w)
                 img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
             
-            # Convertir a HSV y crear máscaras para colores específicos (ajustadas para texto brillante)
+            # Convertir a HSV y crear máscaras optimizadas para texto brillante y colorido
             hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
             masks = [
-                cv2.inRange(hsv, (0, 0, 200), (180, 50, 255)),  # Blanco/texto brillante
-                cv2.inRange(hsv, (20, 50, 100), (40, 255, 255)), # Amarillo/dorado
-                cv2.inRange(hsv, (0, 50, 50), (10, 255, 255))   # Otros tonos claros
+                cv2.inRange(hsv, (20, 50, 200), (40, 255, 255)),  # Amarillo/dorado (precios)
+                cv2.inRange(hsv, (0, 0, 200), (180, 50, 255)),   # Blanco/texto claro
+                cv2.inRange(hsv, (100, 50, 100), (140, 255, 255)) # Cian/azul (otros textos)
             ]
             
             mask = masks[0]
             for m in masks[1:]:
                 mask = cv2.bitwise_or(mask, m)
             
-            # Operaciones morfológicas para limpiar la máscara
-            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))  # Kernel más grande para texto
-            mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=3)
-            mask = cv2.medianBlur(mask, 5)
+            # Operaciones morfológicas para texto pequeño y estilizado
+            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+            mask = cv2.erode(mask, kernel, iterations=1)  # Reducir ruido
+            mask = cv2.dilate(mask, kernel, iterations=2)  # Expandir texto
+            mask = cv2.medianBlur(mask, 3)
             
             # Aplicar máscara y convertir a escala de grises
             result = cv2.bitwise_and(img, img, mask=mask)
             gray = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
             
-            # Umbral adaptativo con ajustes para texto pequeño
+            # Umbral adaptativo optimizado
             thresh = cv2.adaptiveThreshold(
-                gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 15, 5
+                gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 3
             )
-            thresh = cv2.dilate(thresh, None, iterations=1)
-            thresh = cv2.medianBlur(thresh, 5)
+            thresh = cv2.medianBlur(thresh, 3)
             
             return thresh, img
         except Exception as e:
@@ -71,7 +71,7 @@ class Scan(commands.Cog):
             if ocr_img is None:
                 return []
                 
-            # Configuración optimizada para texto monetario
+            # Configuración optimizada para texto monetario con énfasis en M/s
             config = "--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz$./MKBTS "
             data = pytesseract.image_to_data(ocr_img, output_type=pytesseract.Output.DICT, config=config)
             
@@ -103,7 +103,7 @@ class Scan(commands.Cog):
         names, amounts, rates = [], [], []
         name_to_amount = {}  # Diccionario para asociar nombres con montos cercanos
         
-        # Ordenar boxes por coordenada y para asociar nombres con montos
+        # Ordenar boxes por y y luego x para mejor alineación
         sorted_boxes = sorted(boxes, key=lambda b: (b["y"], b["x"]))
         i = 0
         while i < len(sorted_boxes):
@@ -111,14 +111,19 @@ class Scan(commands.Cog):
             t = box["text"].replace(",", ".")
             if name_re.match(t):
                 names.append(t)
-                # Buscar monto cercano (en las siguientes 5 cajas)
-                for j in range(i + 1, min(i + 6, len(sorted_boxes))):
+                # Buscar monto o rate cercano (hasta 6 cajas siguientes)
+                for j in range(i + 1, min(i + 7, len(sorted_boxes))):
                     next_text = sorted_boxes[j]["text"].replace(",", ".")
                     amount_match = amount_re.search(next_text)
+                    rate_match = rate_re.search(next_text)
                     if amount_match:
                         name_to_amount[t] = amount_match.group(0)
+                        i = j + 1  # Saltar al siguiente nombre
                         break
-                i += 1  # Saltar al siguiente nombre después de encontrar un monto
+                    elif rate_match:
+                        name_to_amount[t] = rate_match.group(0)
+                        i = j + 1  # Saltar al siguiente nombre
+                        break
             elif amount_re.search(t) and t not in names:
                 amounts.append(amount_re.search(t).group(0))
             elif rate_re.search(t) and t not in names:
@@ -176,20 +181,21 @@ class Scan(commands.Cog):
                         await ctx.send("⚠️ No se detectaron valores en la imagen.")
                     return
 
-                # Buscar precio de Brainrot (puede ser "Dragon Cannelloni" u otro nombre)
+                # Buscar precio de Brainrot (ajusta el nombre según el item)
                 brainrot_price = None
-                target_name = "Dragon Cannelloni"  # Ajusta según el item que consideres "Brainrot"
+                target_name = "Dragon Cannelloni"  # Ajusta si "Brainrot" es otro item
                 if target_name in name_to_amount:
                     brainrot_price = name_to_amount[target_name]
-                elif names:  # Si no encuentra el nombre exacto, toma el primer nombre con precio
-                    first_name = names[0]
-                    if first_name in name_to_amount:
-                        brainrot_price = name_to_amount[first_name]
+                elif names:  # Fallback al primer nombre con precio
+                    for name in names:
+                        if name in name_to_amount:
+                            brainrot_price = name_to_amount[name]
+                            break
 
                 # Crear resultado
                 result_lines = []
                 if brainrot_price:
-                    result_lines.append(f"**Precio de Brainrot ({target_name if target_name in name_to_amount else first_name}): {brainrot_price}**")
+                    result_lines.append(f"**Precio de Brainrot ({target_name if target_name in name_to_amount else names[0]}): {brainrot_price}**")
                 for i in range(min(len(names), len(rates))):
                     if names[i] != target_name:  # Evitar duplicar Brainrot
                         result_lines.append(f"**{names[i]}** → {rates[i]}")
