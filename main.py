@@ -14,7 +14,7 @@ import threading
 # ============================================================
 
 load_dotenv()
-TOKEN = os.getenv("DISCORD_TOKEN")
+TOKEN = os.getenv("TOKEN")
 
 # Configuración de logs bonitos
 logger = logging.getLogger("discord_bot")
