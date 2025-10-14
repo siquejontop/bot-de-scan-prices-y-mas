@@ -1,27 +1,36 @@
+# Use Python 3.11 slim as the base image
 FROM python:3.11-slim
 
-# Instalar dependencias del sistema y Tesseract
+# Install system dependencies for Tesseract, OpenCV, and other requirements
 RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     tesseract-ocr-eng \
     libtesseract-dev \
-    ffmpeg \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
     libsm6 \
     libxext6 \
-    libgl1 \
+    ffmpeg \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Crear directorio de trabajo
+# Set working directory
 WORKDIR /app
 
-# Copiar los archivos del proyecto
-COPY . /app
+# Copy requirements.txt first to leverage Docker caching
+COPY requirements.txt .
 
-# Instalar dependencias de Python
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Exponer el puerto Flask (para keep-alive)
+# Copy the rest of the application code
+COPY . .
+
+# Expose the Flask port for keep-alive
 EXPOSE 10000
 
-# Comando de ejecución
+# Set environment variable for Tesseract (optional, for clarity)
+ENV TESSERACT_CMD=/usr/bin/tesseract
+
+# Command to run the bot
 CMD ["python", "main.py"]
