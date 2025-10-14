@@ -1,3 +1,4 @@
+# cogs/scan.py
 import discord
 from discord.ext import commands
 import pytesseract
@@ -8,7 +9,7 @@ import os
 import cv2
 import numpy as np
 
-# Ajusta si tu entorno usa otra ruta
+# Ajusta según tu entorno
 pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
 MIN_CONF = 30  # Confianza mínima OCR
@@ -18,13 +19,13 @@ class Scan(commands.Cog):
         self.bot = bot
 
     def preprocess(self, pil_img):
-        """Devuelve imagen para OCR y versión debug"""
+        """Devuelve imagen lista para OCR y versión debug"""
         img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
         h, w = img.shape[:2]
         max_dim = 1280
         if max(h, w) > max_dim:
             scale = max_dim / max(h, w)
-            img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+            img = cv2.resize(img, (int(w*scale), int(h*scale)), interpolation=cv2.INTER_AREA)
 
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
@@ -38,19 +39,18 @@ class Scan(commands.Cog):
         for m in masks[1:]:
             mask = cv2.bitwise_or(mask, m)
 
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
         mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=1)
-        mask = cv2.medianBlur(mask, 3)
+        mask = cv2.medianBlur(mask,3)
 
-        gray = cv2.bitwise_and(img, img, mask=mask)
+        gray = cv2.bitwise_and(img,img,mask=mask)
         gray = cv2.cvtColor(gray, cv2.COLOR_BGR2GRAY)
-        _, th = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        th = cv2.medianBlur(th, 3)
-
+        _, th = cv2.threshold(gray,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+        th = cv2.medianBlur(th,3)
         return th, img
 
     def run_ocr_boxes(self, ocr_img):
-        """OCR con cajas y confidencias"""
+        """OCR con cajas y confianza mínima"""
         data = pytesseract.image_to_data(ocr_img, output_type=pytesseract.Output.DICT, config="--oem 3 --psm 6")
         boxes = []
         for i in range(len(data["text"])):
@@ -69,7 +69,6 @@ class Scan(commands.Cog):
 
     def find_texts(self, boxes):
         """Detecta nombres, montos y rates"""
-        # Regex
         name_re = re.compile(r"[A-Z][a-zA-Z]+(?:\s[A-Z][a-zA-Z]+)*")
         amount_re = re.compile(r"\$?\d{1,3}(?:[.,]\d+)?\s*[KMBT]?B?", re.IGNORECASE)
         rate_re = re.compile(r"\d{1,4}(?:[.,]\d+)?\s*[KMGT]?/s", re.IGNORECASE)
@@ -97,6 +96,7 @@ class Scan(commands.Cog):
         image_url = ctx.message.attachments[0].url
         await ctx.send("🧠 Analizando la imagen, por favor espera...")
 
+        # Descargar imagen
         async with aiohttp.ClientSession() as session:
             async with session.get(image_url) as resp:
                 if resp.status != 200:
@@ -105,7 +105,7 @@ class Scan(commands.Cog):
                 data = await resp.read()
 
         temp_path = "temp_scan.png"
-        with open(temp_path, "wb") as f:
+        with open(temp_path,"wb") as f:
             f.write(data)
 
         pil = Image.open(temp_path).convert("RGB")
@@ -128,8 +128,6 @@ class Scan(commands.Cog):
         result_lines = []
         for i in range(min(len(names), len(rates))):
             result_lines.append(f"**{names[i]}** → `{rates[i]}`")
-
-        # Montos sueltos
         if amounts:
             result_lines.append("Montos detectados: " + ", ".join(f"`{a}`" for a in sorted(set(amounts))))
 
@@ -141,7 +139,6 @@ class Scan(commands.Cog):
         embed.set_footer(text=f"Solicitado por {ctx.author}", icon_url=ctx.author.display_avatar.url)
 
         await ctx.send(embed=embed)
-
 
 async def setup(bot):
     await bot.add_cog(Scan(bot))
