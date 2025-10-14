@@ -93,28 +93,39 @@ class Scan(commands.Cog):
             return []
 
     def find_texts(self, boxes):
-        """Detecta nombres, montos y rates"""
+        """Detecta nombres, montos y rates, asociando precios a nombres"""
         name_re = re.compile(r"^[A-Z][a-zA-Z]+(?:\s[A-Z][a-zA-Z]+)*$")
         amount_re = re.compile(r"\$?\d{1,3}(?:[.,]\d{1,3})*\s*[KMBT]?B?", re.IGNORECASE)
         rate_re = re.compile(r"\d{1,4}(?:[.,]\d+)?\s*[KMGT]?/s", re.IGNORECASE)
         
         names, amounts, rates = [], [], []
-        for b in boxes:
-            t = b["text"].replace(",", ".")
+        name_to_amount = {}  # Diccionario para asociar nombres con montos cercanos
+        
+        # Ordenar boxes por coordenada y para asociar nombres con montos
+        sorted_boxes = sorted(boxes, key=lambda b: b["y"])
+        for i, box in enumerate(sorted_boxes):
+            t = box["text"].replace(",", ".")
             if name_re.match(t):
                 names.append(t)
+                # Buscar monto cercano (en las siguientes 3 cajas)
+                for j in range(i + 1, min(i + 4, len(sorted_boxes))):
+                    next_text = sorted_boxes[j]["text"].replace(",", ".")
+                    amount_match = amount_re.search(next_text)
+                    if amount_match:
+                        name_to_amount[t] = amount_match.group(0)
+                        break
             amount_match = amount_re.search(t)
-            if amount_match:
+            if amount_match and t not in names:
                 amounts.append(amount_match.group(0))
             rate_match = rate_re.search(t)
-            if rate_match:
+            if rate_match and t not in names:
                 rates.append(rate_match.group(0))
         
-        return names, list(set(amounts)), list(set(rates))
+        return names, list(set(amounts)), list(set(rates)), name_to_amount
 
     @commands.command()
     async def scan(self, ctx):
-        """Escanea imagen y detecta nombres, montos y rates"""
+        """Escanea imagen y detecta nombres, montos y rates, destacando precio de Brainrot"""
         if not ctx.message.attachments:
             await ctx.send("📸 Por favor envía una imagen junto con el comando.")
             return
@@ -144,7 +155,7 @@ class Scan(commands.Cog):
                     return
 
                 boxes = self.run_ocr_boxes(ocr_img)
-                names, amounts, rates = self.find_texts(boxes)
+                names, amounts, rates, name_to_amount = self.find_texts(boxes)
 
                 # Limpiar archivo temporal
                 try:
@@ -161,11 +172,19 @@ class Scan(commands.Cog):
                         await ctx.send("⚠️ No se detectaron valores en la imagen.")
                     return
 
+                # Buscar precio de Brainrot (asumimos "La Spooky Grande" como Brainrot)
+                brainrot_price = None
+                if "La Spooky Grande" in name_to_amount:
+                    brainrot_price = name_to_amount["La Spooky Grande"]
+                
                 # Crear resultado
                 result_lines = []
+                if brainrot_price:
+                    result_lines.append(f"**Precio de Brainrot (La Spooky Grande): {brainrot_price}**")
                 for i in range(min(len(names), len(rates))):
-                    result_lines.append(f"**{names[i]}** → {rates[i]}")
-                if amounts:
+                    if names[i] != "La Spooky Grande":  # Evitar duplicar Brainrot
+                        result_lines.append(f"**{names[i]}** → {rates[i]}")
+                if amounts and not brainrot_price:
                     result_lines.append("Montos detectados: " + ", ".join(f"{a}" for a in sorted(amounts)))
 
                 embed = discord.Embed(
