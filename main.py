@@ -100,6 +100,10 @@ async def main():
         await load_cogs()
         await bot.start(TOKEN)
 
+# ============================================================
+# 🔹 KEEP ALIVE + ARRANQUE
+# ============================================================
+
 if __name__ == "__main__":
     keep_alive()
     asyncio.run(main())
