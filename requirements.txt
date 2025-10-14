@@ -10,3 +10,5 @@ openai
 pytesseract
 Pillow
 aiohttp
+opencv-python
+numpy
