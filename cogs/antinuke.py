@@ -11,8 +11,8 @@ OWNER_IDS = [335596693603090434, 523662219020337153, 1158970670928113745]
 WHITELIST = {1325579039888511056, 235148962103951360, 762271645855252501, 416358583220043796, 710034409214181396}
 LOG_CHANNEL_ID = 1421331172969156660
 
-PROTECTED_ROLE_ID = 1421330892038869063  # Rol "auth mm"
-OWNER_ROLE_ID = 1421330806399565888      # Rol "owner"
+PROTECTED_ROLE_ID = 1421330892038869063  
+OWNER_ROLE_ID = 1421330806399565888     
 
 MAX_BANS = 3
 MAX_CHANNELS = 3
@@ -179,14 +179,14 @@ class AntiNuke(commands.Cog):
                         return
                     try:
                         await after.remove_roles(protected_role, reason="AntiNuke: otorgó rol protegido")
-                        await after.guild.ban(executor, reason="AntiNuke: otorgó rol protegido")
+                        await executor.timeout(duration=300, reason="AntiNuke: otorgó rol protegido")  # Timeout de 5 minutos
                         await self.log_action(
                             after.guild,
                             f"⛔ {executor.mention} intentó dar el rol protegido a {after.mention}. "
-                            f"El rol fue removido y {executor.mention} fue baneado."
+                            f"El rol fue removido y {executor.mention} recibió un timeout de 5 minutos."
                         )
                     except discord.Forbidden:
-                        await self.log_action(after.guild, f"⛔ No tengo permisos para remover el rol de {after.mention} o banear a {executor.mention}.")
+                        await self.log_action(after.guild, f"⛔ No tengo permisos para remover el rol de {after.mention} o aplicar timeout a {executor.mention}.")
                     break
 
     # 🚨 Anti creación de webhooks
