@@ -333,9 +333,12 @@ class Moderation(commands.Cog):
 
         try:
             await member.add_roles(mute_role, reason=reason)
+            description = f"{member.mention} fue muteado.\n**Razón:** {reason}"
+            if duration:
+                description += f"\n⏳ Duración: {duration}"
             embed = discord.Embed(
                 title="🔇 Usuario muteado",
-                description=f"{member.mention} fue muteado.\n**Razón:** {reason}{f'\n⏳ Duración: {duration}' if duration else ''}",
+                description=description,
                 color=discord.Color.dark_gray(),
                 timestamp=datetime.now(timezone.utc)
             )
