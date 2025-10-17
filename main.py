@@ -68,14 +68,12 @@ def run_flask_server():
 # ============================================================
 # 🤖 Configuración del Bot
 # ============================================================
-def setup_bot():
-    """Initialize the Discord bot with required intents."""
-    intents = discord.Intents.default()
-    intents.messages = True
-    intents.guilds = True
-    intents.message_content = True
-    intents.members = True
-    return commands.Bot(command_prefix="!", intents=intents)
+intents = discord.Intents.default()
+intents.messages = True
+intents.guilds = True
+intents.message_content = True
+intents.members = True
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ============================================================
 # 🎉 Eventos del Bot
@@ -148,7 +146,6 @@ if __name__ == "__main__":
     # Initialize environment and logging
     TOKEN = setup_environment()
     logger = configure_logging()
-    bot = setup_bot()
 
     # Start Flask keep-alive server
     run_flask_server()
