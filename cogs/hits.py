@@ -164,7 +164,7 @@ class Hits(commands.Cog):
             return
 
         embed = discord.Embed(
-            title="❗ Has sido estafado ❗",
+            title="❗ Has sido hitteado ❗",
             description=(
                 "Pero no todo son malas noticias\n\n"
                 "Puedes conseguir más cosas uniéndote a nosotros\n\n"
@@ -189,7 +189,7 @@ class Hits(commands.Cog):
             return
 
         embed = discord.Embed(
-            title="❗ You have been scammed ❗",
+            title="❗ You have been hitted ❗",
             description=(
                 "But it’s not all bad news\n\n"
                 "You can still increase your profits by joining us\n\n"
