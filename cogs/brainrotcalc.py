@@ -1,6 +1,11 @@
-.bot = bot
+import discord
+from discord.ext import commands
 
-        # 🔥 Fórmulas actualizadas
+class Precios(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+            # 🔥 Fórmulas actualizadas
         self.formulas = {
             "loscombinasionas": (15, 0.06, 2, "(M − 15) × 0.06 + 2", "Los combinasionas"),
             "esoksekolah": (30, 0.04, 2, "(M − 30) × 0.04 + 2", "Esok sekolah"),
