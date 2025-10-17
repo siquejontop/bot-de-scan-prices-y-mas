@@ -176,7 +176,6 @@ class Hits(commands.Cog):
                 "· Si te unes fácilmente recuperarás tus cosas y conseguirás mejores!\n"
                 "· Esta es una oportunidad increíble para que consigas muchas cosas\n\n"
                 "⚠️ El único requisito es compartir lo que consigas 50/50 o 100% dependiendo del middleman.\n\n"
-                "Usa ,hit para la versión en inglés."
             ),
             color=discord.Color.red()
         )
@@ -202,7 +201,6 @@ class Hits(commands.Cog):
                 "· If you join, you can easily recover your stuff and get even better ones!\n"
                 "· This is an amazing long term investment form\n\n"
                 "⚠️ The only requirement is to share what you get 50/50 or 100% depending on the middleman.\n\n"
-                "Use ,hits for the Spanish version."
             ),
             color=discord.Color.red()
         )
