@@ -1,9 +1,4 @@
-import discord
-from discord.ext import commands
-
-class Precios(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
+.bot = bot
 
         # 🔥 Fórmulas actualizadas
         self.formulas = {
@@ -17,24 +12,28 @@ class Precios(commands.Cog):
             "ketchuruandmusturu": (42.5, 0.08, 11.5, "(M − 42.5) × 0.08 + 11.5", "Ketchuru and musturu"),
             "nuclearodinossauro": (15, 0.10, 12, "(M − 15) × 0.10 + 12", "Nuclearo dinossauro"),
             "lasupremecombinasion": (40, 0.11, 15, "(M − 40) × 0.11 + 15", "La supreme combinasion"),
-            "tacoritabicicleta": (16.5, 0.04, 2, "(M - 16.5) × 0.04 + 2", "Tacorita bicicleta"),
-            "laextinctgrande": (23.5, 0.04, 3, "(M− 23.5) × 0.04 + 3", "La extinct grande"),
-            "lassis": (17.5, 0.03, 3, "(M - 17.5) × 0.03 + 3", "Las sis"),
-            "losprimos": (31, 0.03, 4, "(M - 31) × 0.03 + 4", "Los primos"),
-            "lostacoritas": (32, 0.04, 3.5, "(M - 32) × 0.04 + 3.5", "Los tacoritas"),
+            "tacoritabicicleta": (16.5, 0.04, 2, "(M − 16.5) × 0.04 + 2", "Tacorita bicicleta"),
+            "laextinctgrande": (23.5, 0.04, 3, "(M − 23.5) × 0.04 + 3", "La extinct grande"),
+            "lassis": (17.5, 0.03, 3, "(M − 17.5) × 0.03 + 3", "Las sis"),
+            "losprimos": (31, 0.03, 4, "(M − 31) × 0.03 + 4", "Los primos"),
+            "lostacoritas": (32, 0.04, 3.5, "(M − 32) × 0.04 + 3.5", "Los tacoritas"),
             "celularciniviciosini": (22.5, 0.06, 5, "(M − 22.5) × 0.06 + 5", "Celularcini viciosini"),
-            "spaghettitualetti": (60, 0.03, 7.5, "(M − 60) × 0.03 + 7.5", "Spaghetti tualetti"),
-            "tictacsahur": (37.5, 0.06, 8, "(M - 37.5) × 0.06 + 8", "Tictac sahur"),
-            "garamaandmadundung": (50, 0.13, 24, "(M − 50) × 0.13 + 24", "Garama and madundung"),
+            "spaghettitualetti": (60, 0.03, 7, "(M − 60) × 0.03 + 7", "Spaghetti tualetti"),
+            "tictacsahur": (37.5, 0.06, 8, "(M − 37.5) × 0.06 + 8", "Tictac sahur"),
+            "garamaandmadundung": (50, 0.08, 20, "(M − 50) × 0.08 + 20", "Garama and madundung"),
             "dragoncannelloni": (200, 0.30, 125, "(M − 200) × 0.30 + 125", "Dragon cannelloni"),
-            "mariachicorazoni": (12.5, 0.05, 1.5, "(M - 12.5) × 0.05 + 1.5", "Mariachi corazoni"),
-            "los67": (22.5, 0.03, 2, "(M - 22.5) × 0.03 + 2", "Los 67"),
-            "chillinchili": (25, 0.04, 3, "(M - 25) × 0.04 + 3", "Chillin chili"),
-            "tangtangkelentang": (33.5, 0.05, 5, "(M - 33.5) × 0.05 + 5", "Tang tang kelentang"),
-            "moneymoneypuggy": (21, 0.06, 7, "(M - 21) × 0.06 + 7", "Money money puggy"),
-            "lassecretcombinasion": (125, 0.06, 12, "(M - 125) × 0.06 + 12", "La secret combinasion"),
-            "burguroandfryuro": (150, 0.12, 25, "(M - 150) × 0.12 + 25", "Burguro and fryuro"),
-            "strawberryelephant": (350, 0.40, 300, "(M - 350) × 0.40 + 300", "Strawberry elephant"),
+            "losmobilis": (22, 0.04, 1.5, "(M − 22) × 0.04 + 1.5", "Los mobilis"),
+            "mariachicorazoni": (12.5, 0.05, 1.5, "(M − 12.5) × 0.05 + 1.5", "Mariachi corazoni"),
+            "los67": (22.5, 0.03, 1.5, "(M − 22.5) × 0.03 + 1.5", "Los 67"),
+            "chillinchili": (25, 0.04, 3, "(M − 25) × 0.04 + 3", "Chillin chili"),
+            "tangtangkelentang": (33.5, 0.05, 5, "(M − 33.5) × 0.05 + 5", "Tang tang kelentang"),
+            "eviledon": (31.5, 0.04, 6, "(M − 31.5) × 0.04 + 6", "Eviledon"),
+            "moneymoneypuggy": (21, 0.06, 7, "(M − 21) × 0.06 + 7", "Money money puggy"),
+            "lassecretcombinasion": (125, 0.06, 12, "(M − 125) × 0.06 + 12", "La secret combinasion"),
+            "burguroandfryuro": (150, 0.12, 25, "(M − 150) × 0.12 + 25", "Burguro and fryuro"),
+            "strawberryelephant": (350, 0.40, 300, "(M − 350) × 0.40 + 300", "Strawberry elephant"),
+            "laspookygrande": (24.5, 0.03, 3, "(M − 24.5) × 0.03 + 3", "La spooky grande"),
+            "spookyandpumpky": (80, 0.08, 24, "(M − 80) × 0.08 + 24", "Spooky and pumpky"),
         }
 
         # Alias → clave real
@@ -86,6 +85,7 @@ class Precios(commands.Cog):
             "chili": "chillinchili",
             "ttk": "tangtangkelentang",
             "kelentang": "tangtangkelentang",
+            "ev": "eviledon",
             "mmp": "moneymoneypuggy",
             "puggy": "moneymoneypuggy",
             "lsc2": "lassecretcombinasion",
@@ -94,6 +94,8 @@ class Precios(commands.Cog):
             "se": "strawberryelephant",
             "strawberry": "strawberryelephant",
             "elephant": "strawberryelephant",
+            "spooky": "laspookygrande",
+            "pumpky": "spookyandpumpky",
         }
 
     def make_embed(self, ctx, nombre: str, formula: str, operacion: str, resultado: float, pretty: str):
@@ -128,7 +130,7 @@ class Precios(commands.Cog):
 
         if nombre not in self.formulas:
             lista = ", ".join(self.formulas.keys())
-            return await ctx.send(embed=self.error_embed(ctx, f"❌ No encontré la fórmula **{nombre}**.\nOpciones: {lista}"))
+            return await ctx.send(embed=self.error_embed(ctx, f"❌ No encontré la fórmula **{nombre}**. Opciones: {lista}"))
 
         if m is None:
             return await ctx.send(embed=self.error_embed(
@@ -194,4 +196,9 @@ class Precios(commands.Cog):
                 await message.remove_reaction(reaction, user)
 
 async def setup(bot):
-    await bot.add_cog(Precios(bot))
+    await bot.add_cog(Precios(bot))import discord
+from discord.ext import commands
+
+class Precios(commands.Cog):
+    def __init__(self, bot):
+        self
