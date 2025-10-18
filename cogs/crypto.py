@@ -6,20 +6,18 @@ from datetime import datetime
 class Crypto(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        # Lista de símbolos válidos (IDs de CoinGecko)
         self.valid_symbols = {
             "btc": "bitcoin", "eth": "ethereum", "ltc": "litecoin", "xmr": "monero",
             "doge": "dogecoin", "ada": "cardano", "sol": "solana", "bnb": "binancecoin"
         }
 
     @commands.command(name="helpcrypto")
-    async def helpcrypto(self, ctx, *, args=None):
+    async def cripto(self, ctx, *, args=None):
         """
         Obtiene información detallada de criptomonedas.
-        Uso: ,helpcrypto <símbolo1> [símbolo2 ...] (ej: ,helpcrypto eth ltc, ,helpcrypto btc)
+        Uso: ,cripto <símbolo1> [símbolo2 ...] (ej: ,helpcrypto eth ltc, ,helpcrypto btc)
         """
-        # Depuración: Registrar los argumentos recibidos
-        print(f"Recibido comando helpcrypto con args: {args}")
+        print(f"Recibido comando cripto con args: {args}")
 
         if not args:
             embed = discord.Embed(
@@ -33,7 +31,6 @@ class Crypto(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        # Dividir los argumentos en una lista de símbolos
         symbols = [s.strip() for s in args.split()]
         valid_symbols = []
         for sym in symbols:
@@ -47,7 +44,6 @@ class Crypto(commands.Cog):
         if not valid_symbols:
             return
 
-        # URL de la API de CoinGecko
         url = "https://api.coingecko.com/api/v3/coins/markets"
         params = {
             "vs_currency": "usd",
@@ -79,10 +75,8 @@ class Crypto(commands.Cog):
                 low_24h = crypto["low_24h"]
                 market_cap = crypto["market_cap"]
                 volume_24h = crypto["total_volume"]
-                # Depuración del valor de last_updated
                 last_updated_raw = crypto["last_updated"]
                 print(f"Tipo de last_updated para {symbol}: {type(last_updated_raw)}, valor: {last_updated_raw}")
-                # Convertir a datetime si es ISO, o a timestamp si es numérico
                 if isinstance(last_updated_raw, str):
                     last_updated = datetime.fromisoformat(last_updated_raw.replace("Z", "+00:00")).strftime("%Y-%m-%d %H:%M:%S UTC")
                 else:
