@@ -356,8 +356,8 @@ class Roles(commands.Cog):
         if not role_changes:
             return await ctx.send(embed=discord.Embed(description=f"ℹ️ No se encontraron cambios de roles para {member.mention} en la última hora.", color=discord.Color.blurple()))
 
-        # Usar el estado más antiguo como base para restaurar
-        target_roles = set(role_changes[0].before.roles) if role_changes and role_changes[0].before else set()
+        # Usar el estado más antiguo como base para restaurar, con respaldo si no hay before
+        target_roles = set(role_changes[0].before.roles) if role_changes and role_changes[0].before else set(member.roles) - {ctx.guild.default_role}
         current_roles = set(member.roles) - {ctx.guild.default_role}
 
         roles_to_add = target_roles - current_roles
@@ -368,6 +368,26 @@ class Roles(commands.Cog):
             ok, error = self.can_modify_role(ctx, member, role)
             if not ok:
                 return await ctx.send(embed=discord.Embed(description=error, color=discord.Color.red()))
+
+        try:
+            if roles_to_add or roles_to_remove:
+                if roles_to_remove:
+                    await member.remove_roles(*roles_to_remove)
+                if roles_to_add:
+                    await member.add_roles(*roles_to_add)
+                roles_added_str = ", ".join([role.mention for role in roles_to_add]) if roles_to_add else "ninguno"
+                roles_removed_str = ", ".join([role.mention for role in roles_to_remove]) if roles_to_remove else "ninguno"
+                embed = discord.Embed(
+                    description=f"🕰️ {ctx.author.mention} : Restaurados roles de {member.mention}\n**Añadidos**: {roles_added_str}\n**Quitados**: {roles_removed_str}",
+                    color=discord.Color.green()
+                )
+            else:
+                embed = discord.Embed(description=f"ℹ️ No se necesitaron cambios para restaurar los roles de {member.mention}.", color=discord.Color.blurple())
+            await ctx.send(embed=embed)
+        except discord.Forbidden:
+            await ctx.send("❌ No tengo permisos suficientes para restaurar los roles.")
+        except discord.HTTPException as e:
+            await ctx.send(embed=discord.Embed(description=f"❌ Error al restaurar roles: {e}", color=discord.Color.red()))
 
         try:
             if roles_to_add or roles_to_remove:
