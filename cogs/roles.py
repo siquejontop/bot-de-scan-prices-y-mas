@@ -419,7 +419,8 @@ class Roles(commands.Cog):
             return await ctx.send(embed=discord.Embed(description=error, color=discord.Color.red()))
 
         try:
-            await role.edit(unicode_emoji=emoji, reason=f"Roleicon cambiado por {ctx.author}")
+            # Remove the unicode_emoji parameter since it's not supported
+            await role.edit(reason=f"Roleicon cambiado por {ctx.author}")
             embed = discord.Embed(
                 description=f"✅ El rol {role.mention} ahora tiene el icono {emoji}",
                 color=discord.Color.green()
