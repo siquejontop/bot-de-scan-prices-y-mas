@@ -215,6 +215,40 @@ class Roles(commands.Cog):
             await ctx.send("❌ No tengo permisos suficientes para asignar ese rol.")
 
     # ========================
+    # ➕ Añadir múltiples roles
+    # ========================
+    @commands.command(name="addroles", aliases=["addrs", "ars"])
+    @commands.has_permissions(manage_roles=True)
+    async def addroles(self, ctx, member_arg: str, *, roles_arg: str):
+        member = ctx.guild.get_member(int(member_arg[2:-1])) if member_arg.startswith("<@") else self.find_member(ctx, member_arg)
+        if not member:
+            return await ctx.send(embed=discord.Embed(description=f"❌ No encontré el usuario **{member_arg}**.", color=discord.Color.red()))
+
+        role_names = [r.strip() for r in roles_arg.split(",")]
+        roles = []
+        for role_arg in role_names:
+            role = self.find_role(ctx, role_arg)
+            if role is None:
+                return await ctx.send(embed=discord.Embed(description=f"❌ No encontré el rol **{role_arg}**.", color=discord.Color.red()))
+            if isinstance(role, list):
+                return await ctx.send(f"🔎 Múltiples roles encontrados para **{role_arg}**, elige uno:", view=RoleSelect(ctx, role, member, "add"))
+            roles.append(role)
+
+        # Validar jerarquía para cada rol
+        for role in roles:
+            ok, error = self.can_modify_role(ctx, member, role)
+            if not ok:
+                return await ctx.send(embed=discord.Embed(description=error, color=discord.Color.red()))
+
+        try:
+            await member.add_roles(*roles)
+            roles_mention = ", ".join([role.mention for role in roles])
+            embed = discord.Embed(description=f"➕ {ctx.author.mention} : Added {roles_mention} to {member.mention}", color=discord.Color.green())
+            await ctx.send(embed=embed)
+        except discord.Forbidden:
+            await ctx.send("❌ No tengo permisos suficientes para asignar esos roles.")
+
+    # ========================
     # ➖ Quitar rol
     # ========================
     @commands.command(name="removerole", aliases=["delrole", "rr", "dr"])
@@ -240,6 +274,35 @@ class Roles(commands.Cog):
             await ctx.send(embed=embed)
         except discord.Forbidden:
             await ctx.send("❌ No tengo permisos suficientes para quitar ese rol.")
+
+    # ========================
+    # 🗑️ Quitar todos los roles
+    # ========================
+    @commands.command(name="purgeroles", aliases=["clearroles", "pr"])
+    @commands.has_permissions(manage_roles=True)
+    async def purgeroles(self, ctx, member_arg: str):
+        member = ctx.guild.get_member(int(member_arg[2:-1])) if member_arg.startswith("<@") else self.find_member(ctx, member_arg)
+        if not member:
+            return await ctx.send(embed=discord.Embed(description=f"❌ No encontré el usuario **{member_arg}**.", color=discord.Color.red()))
+
+        # Excluir @everyone
+        roles_to_remove = [role for role in member.roles if role != ctx.guild.default_role]
+
+        # Validar jerarquía para cada rol
+        for role in roles_to_remove:
+            ok, error = self.can_modify_role(ctx, member, role)
+            if not ok:
+                return await ctx.send(embed=discord.Embed(description=error, color=discord.Color.red()))
+
+        try:
+            if roles_to_remove:
+                await member.remove_roles(*roles_to_remove)
+                embed = discord.Embed(description=f"🗑️ {ctx.author.mention} : Removed all roles from {member.mention}", color=discord.Color.red())
+            else:
+                embed = discord.Embed(description=f"ℹ️ {member.mention} no tiene roles para quitar.", color=discord.Color.blurple())
+            await ctx.send(embed=embed)
+        except discord.Forbidden:
+            await ctx.send("❌ No tengo permisos suficientes para quitar esos roles.")
 
     # ========================
     # 🔄 Toggle rol
