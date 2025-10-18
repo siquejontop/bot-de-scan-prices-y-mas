@@ -130,22 +130,42 @@ class Fun(commands.Cog):
                     await self.send_dm(confirmed_member, dm_embed_mm, staff_channel=ventas_channel)
 
             # Notificación al owner si se recibe un rol superior a Middleman Novato
-            mm_role = discord.utils.get(after.guild.roles, id=MIDDLEMANNOVATO_ROLE_ID)
             if mm_role:
                 for role in added_roles:
                     if role.position > mm_role.position:  # Rol superior a Middleman Novato
+                        # Obtener quién asignó el rol desde los registros de auditoría
+                        async for entry in after.guild.audit_logs(limit=5, action=discord.AuditLogAction.member_role_update):
+                            if entry.target.id == after.id and role.id in entry.after.roles:
+                                assigner = entry.user
+                                break
+                        else:
+                            assigner = None
+
                         owner = self.bot.get_user(OWNER_ID)
                         if owner:
                             notify_embed = discord.Embed(
                                 title="🚨 Nuevo rol superior detectado",
                                 description=(
-                                    f"El usuario **{after.name}#{after.discriminator}** ({after.id}) ha recibido el rol **{role.name}** "
+                                    f"El usuario **{after.name}#{after.discriminator}** (ID: {after.id}) ha recibido el rol **{role.name}** (ID: {role.id}) "
                                     f"que es superior a **Middleman Novato**.\n"
                                     f"Servidor: **{after.guild.name}**"
                                 ),
                                 color=discord.Color.red(),
                                 timestamp=datetime.now(COLOMBIA_TZ)
                             )
+                            if assigner:
+                                notify_embed.add_field(
+                                    name="Asignado por",
+                                    value=f"**{assigner.name}#{assigner.discriminator}** (ID: {assigner.id})",
+                                    inline=True
+                                )
+                            else:
+                                notify_embed.add_field(
+                                    name="Asignado por",
+                                    value="Desconocido (no encontrado en registros recientes)",
+                                    inline=True
+                                )
+                            notify_embed.set_footer(text=f"Fecha: {datetime.now(COLOMBIA_TZ).strftime('%Y-%m-%d %H:%M:%S %Z')}")
                             await self.send_dm(owner, notify_embed)
                         break
 
