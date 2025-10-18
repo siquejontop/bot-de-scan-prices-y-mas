@@ -53,7 +53,7 @@ class Crypto(commands.Cog):
         }
 
         try:
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=10)  # Añadido timeout para evitar bloqueos
             response.raise_for_status()
             data = response.json()
 
