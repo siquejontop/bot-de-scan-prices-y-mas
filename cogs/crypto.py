@@ -79,11 +79,14 @@ class Crypto(commands.Cog):
                 low_24h = crypto["low_24h"]
                 market_cap = crypto["market_cap"]
                 volume_24h = crypto["total_volume"]
-                # Convertir last_updated a entero si es una cadena
-                last_updated_str = crypto["last_updated"]
-                print(f"Tipo de last_updated para {symbol}: {type(last_updated_str)}, valor: {last_updated_str}")
-                last_updated = int(float(last_updated_str)) if isinstance(last_updated_str, str) else int(last_updated_str)
-                last_updated = datetime.fromtimestamp(last_updated).strftime("%Y-%m-%d %H:%M:%S UTC")
+                # Depuración del valor de last_updated
+                last_updated_raw = crypto["last_updated"]
+                print(f"Tipo de last_updated para {symbol}: {type(last_updated_raw)}, valor: {last_updated_raw}")
+                # Convertir a datetime si es ISO, o a timestamp si es numérico
+                if isinstance(last_updated_raw, str):
+                    last_updated = datetime.fromisoformat(last_updated_raw.replace("Z", "+00:00")).strftime("%Y-%m-%d %H:%M:%S UTC")
+                else:
+                    last_updated = datetime.fromtimestamp(int(float(last_updated_raw))).strftime("%Y-%m-%d %H:%M:%S UTC")
 
                 color = discord.Color.green() if change_24h >= 0 else discord.Color.red()
 
