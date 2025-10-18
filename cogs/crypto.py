@@ -13,12 +13,15 @@ class Crypto(commands.Cog):
         }
 
     @commands.command(name="helpcrypto")
-    async def helpcrypto(self, ctx, *symbols):
+    async def helpcrypto(self, ctx, *, args=None):
         """
         Obtiene información detallada de criptomonedas.
         Uso: ,helpcrypto <símbolo1> [símbolo2 ...] (ej: ,helpcrypto eth ltc, ,helpcrypto btc)
         """
-        if not symbols:
+        # Depuración: Registrar los argumentos recibidos
+        print(f"Recibido comando helpcrypto con args: {args}")
+
+        if not args:
             embed = discord.Embed(
                 title="ℹ️ Ayuda de ,helpcrypto",
                 description="Usa este comando para ver precios y datos de criptomonedas.\n"
@@ -30,7 +33,8 @@ class Crypto(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        # Normalizar y validar símbolos
+        # Dividir los argumentos en una lista de símbolos
+        symbols = [s.strip() for s in args.split()]
         valid_symbols = []
         for sym in symbols:
             sym = sym.lower().strip()
@@ -53,7 +57,7 @@ class Crypto(commands.Cog):
         }
 
         try:
-            response = requests.get(url, params=params, timeout=10)  # Añadido timeout para evitar bloqueos
+            response = requests.get(url, params=params, timeout=10)
             response.raise_for_status()
             data = response.json()
 
@@ -75,9 +79,12 @@ class Crypto(commands.Cog):
                 low_24h = crypto["low_24h"]
                 market_cap = crypto["market_cap"]
                 volume_24h = crypto["total_volume"]
-                last_updated = datetime.fromtimestamp(crypto["last_updated"]).strftime("%Y-%m-%d %H:%M:%S UTC")
+                # Convertir last_updated a entero si es una cadena
+                last_updated_str = crypto["last_updated"]
+                print(f"Tipo de last_updated para {symbol}: {type(last_updated_str)}, valor: {last_updated_str}")
+                last_updated = int(float(last_updated_str)) if isinstance(last_updated_str, str) else int(last_updated_str)
+                last_updated = datetime.fromtimestamp(last_updated).strftime("%Y-%m-%d %H:%M:%S UTC")
 
-                # Color del embed basado en el cambio
                 color = discord.Color.green() if change_24h >= 0 else discord.Color.red()
 
                 embed = discord.Embed(
@@ -92,7 +99,7 @@ class Crypto(commands.Cog):
                     color=color,
                     timestamp=datetime.utcnow()
                 )
-                embed.set_thumbnail(url=crypto["image"])  # Icono dinámico de la cripto
+                embed.set_thumbnail(url=crypto["image"])
                 await ctx.send(embed=embed)
 
         except requests.exceptions.RequestException as e:
@@ -103,7 +110,7 @@ class Crypto(commands.Cog):
                 timestamp=datetime.utcnow()
             )
             await ctx.send(embed=embed)
-            print(f"Error en helpcrypto command: {e}")  # Log para depuración
+            print(f"Error en helpcrypto command: {e}")
 
 async def setup(bot):
     await bot.add_cog(Crypto(bot))
