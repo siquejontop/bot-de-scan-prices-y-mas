@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+import datetime
 
 # ========================
 # 📌 Selector de roles
@@ -270,7 +271,7 @@ class Roles(commands.Cog):
 
         try:
             await member.remove_roles(role)
-            embed = discord.Embed(description=f"➖ {ctx.author.mention} : Removed {role.mention} from {member.mention}", color=discord.Color.red())
+            embed = discord.Embed(description=f"➖ {self.ctx.author.mention} : Removed {role.mention} from {member.mention}", color=discord.Color.red())
             await ctx.send(embed=embed)
         except discord.Forbidden:
             await ctx.send("❌ No tengo permisos suficientes para quitar ese rol.")
@@ -334,6 +335,72 @@ class Roles(commands.Cog):
             await ctx.send(embed=embed)
         except discord.Forbidden:
             await ctx.send("❌ No tengo permisos suficientes para modificar ese rol.")
+
+    # ========================
+    # 🕰️ Restaurar roles de hace 1 hora
+    # ========================
+    @commands.command(name="restoreroles", aliases=["rrs", "restorer"])
+    @commands.has_permissions(manage_roles=True)
+    async def restoreroles(self, ctx, member_arg: str):
+        member = ctx.guild.get_member(int(member_arg[2:-1])) if member_arg.startswith("<@") else self.find_member(ctx, member_arg)
+        if not member:
+            return await ctx.send(embed=discord.Embed(description=f"❌ No encontré el usuario **{member_arg}**.", color=discord.Color.red()))
+
+        # Obtener registros de auditoría de los últimos 60 minutos
+        after_time = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=1)
+        role_changes = []
+        async for entry in ctx.guild.audit_logs(limit=100, after=after_time):
+            if entry.action in (discord.AuditLogAction.member_role_update) and entry.target.id == member.id:
+                role_changes.append(entry)
+
+        if not role_changes:
+            return await ctx.send(embed=discord.Embed(description=f"ℹ️ No se encontraron cambios de roles para {member.mention} en la última hora.", color=discord.Color.blurple()))
+
+        # Determinar los roles que tenía el usuario hace aproximadamente 1 hora
+        current_roles = set(member.roles) - {ctx.guild.default_role}
+        roles_to_add = set()
+        roles_to_remove = set()
+
+        for entry in reversed(role_changes):  # Procesar en orden cronológico
+            if entry.before.roles and entry.after.roles:
+                before_roles = set(entry.before.roles)
+                after_roles = set(entry.after.roles)
+                roles_added = after_roles - before_roles
+                roles_removed = before_roles - after_roles
+
+                # Para restaurar, revertimos los cambios: quitamos los roles añadidos y añadimos los quitados
+                roles_to_remove.update(roles_added)
+                roles_to_add.update(roles_removed)
+
+        # Ajustar según los roles actuales
+        roles_to_add = roles_to_add - current_roles  # No añadir roles que ya tiene
+        roles_to_remove = roles_to_remove & current_roles  # Solo quitar roles que aún tiene
+
+        # Validar jerarquía para cada rol
+        for role in roles_to_add | roles_to_remove:
+            ok, error = self.can_modify_role(ctx, member, role)
+            if not ok:
+                return await ctx.send(embed=discord.Embed(description=error, color=discord.Color.red()))
+
+        try:
+            if roles_to_add or roles_to_remove:
+                if roles_to_remove:
+                    await member.remove_roles(*roles_to_remove)
+                if roles_to_add:
+                    await member.add_roles(*roles_to_add)
+                roles_added_str = ", ".join([role.mention for role in roles_to_add]) if roles_to_add else "ninguno"
+                roles_removed_str = ", ".join([role.mention for role in roles_to_remove]) if roles_to_remove else "ninguno"
+                embed = discord.Embed(
+                    description=f"🕰️ {ctx.author.mention} : Restaurados roles de {member.mention}\n**Añadidos**: {roles_added_str}\n**Quitados**: {roles_removed_str}",
+                    color=discord.Color.green()
+                )
+            else:
+                embed = discord.Embed(description=f"ℹ️ No se necesitaron cambios para restaurar los roles de {member.mention}.", color=discord.Color.blurple())
+            await ctx.send(embed=embed)
+        except discord.Forbidden:
+            await ctx.send("❌ No tengo permisos suficientes para restaurar los roles.")
+        except discord.HTTPException as e:
+            await ctx.send(embed=discord.Embed(description=f"❌ Error al restaurar roles: {e}", color=discord.Color.red()))
 
     # ========================
     # 🖼️ Cambiar icono de rol (solo emoji Unicode)
