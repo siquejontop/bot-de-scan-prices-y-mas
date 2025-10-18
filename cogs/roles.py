@@ -356,25 +356,12 @@ class Roles(commands.Cog):
         if not role_changes:
             return await ctx.send(embed=discord.Embed(description=f"ℹ️ No se encontraron cambios de roles para {member.mention} en la última hora.", color=discord.Color.blurple()))
 
-        # Determinar los roles que tenía el usuario hace aproximadamente 1 hora
+        # Usar el estado más antiguo como base para restaurar
+        target_roles = set(role_changes[0].before.roles) if role_changes and role_changes[0].before else set()
         current_roles = set(member.roles) - {ctx.guild.default_role}
-        roles_to_add = set()
-        roles_to_remove = set()
 
-        for entry in reversed(role_changes):  # Procesar en orden cronológico
-            if entry.before.roles and entry.after.roles:
-                before_roles = set(entry.before.roles)
-                after_roles = set(entry.after.roles)
-                roles_added = after_roles - before_roles
-                roles_removed = before_roles - after_roles
-
-                # Para restaurar, revertimos los cambios: quitamos los roles añadidos y añadimos los quitados
-                roles_to_remove.update(roles_added)
-                roles_to_add.update(roles_removed)
-
-        # Ajustar según los roles actuales
-        roles_to_add = roles_to_add - current_roles  # No añadir roles que ya tiene
-        roles_to_remove = roles_to_remove & current_roles  # Solo quitar roles que aún tiene
+        roles_to_add = target_roles - current_roles
+        roles_to_remove = current_roles - target_roles
 
         # Validar jerarquía para cada rol
         for role in roles_to_add | roles_to_remove:
