@@ -12,3 +12,4 @@ Pillow
 aiohttp
 opencv-python
 numpy
+requests==2.32.5
