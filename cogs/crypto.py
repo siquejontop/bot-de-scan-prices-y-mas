@@ -11,7 +11,7 @@ class Crypto(commands.Cog):
             "doge": "dogecoin", "ada": "cardano", "sol": "solana", "bnb": "binancecoin"
         }
 
-    @commands.command(name="helpcrypto")
+    @commands.command(name="cripto")
     async def cripto(self, ctx, *, args=None):
         """
         Obtiene información detallada de criptomonedas.
@@ -21,9 +21,9 @@ class Crypto(commands.Cog):
 
         if not args:
             embed = discord.Embed(
-                title="ℹ️ Ayuda de ,helpcrypto",
+                title="ℹ️ Ayuda de ,cripto",
                 description="Usa este comando para ver precios y datos de criptomonedas.\n"
-                            "Ejemplos: `,helpcrypto eth`, `,helpcrypto btc ltc`.\n"
+                            "Ejemplos: `,cripto eth`, `,cripto btc ltc`.\n"
                             "Símbolos válidos: btc, eth, ltc, xmr, doge, ada, sol, bnb.",
                 color=discord.Color.blue(),
                 timestamp=datetime.utcnow()
