@@ -109,7 +109,6 @@ class Fun(commands.Cog):
                 if ventas_channel:
                     await ventas_channel.send(f"⭐ {after.mention} recibió el rol de **Middleman**")
                     
-                    # Embed visible en canal ventas
                     embed_channel = discord.Embed(
                         title="Bienvenido Middleman",
                         description=(f"No olvides de leer {mmguide_channel.mention} para evitar cualquier problema en el servidor."),
@@ -129,6 +128,26 @@ class Fun(commands.Cog):
                     )
                     dm_embed_mm.set_footer(text="Gracias por tu apoyo")
                     await self.send_dm(confirmed_member, dm_embed_mm, staff_channel=ventas_channel)
+
+            # Notificación al owner si se recibe un rol superior a Middleman Novato
+            mm_role = discord.utils.get(after.guild.roles, id=MIDDLEMANNOVATO_ROLE_ID)
+            if mm_role:
+                for role in added_roles:
+                    if role.position > mm_role.position:  # Rol superior a Middleman Novato
+                        owner = self.bot.get_user(OWNER_ID)
+                        if owner:
+                            notify_embed = discord.Embed(
+                                title="🚨 Nuevo rol superior detectado",
+                                description=(
+                                    f"El usuario **{after.name}#{after.discriminator}** ({after.id}) ha recibido el rol **{role.name}** "
+                                    f"que es superior a **Middleman Novato**.\n"
+                                    f"Servidor: **{after.guild.name}**"
+                                ),
+                                color=discord.Color.red(),
+                                timestamp=datetime.now(COLOMBIA_TZ)
+                            )
+                            await self.send_dm(owner, notify_embed)
+                        break
 
         except Exception as e:
             print("Error en on_member_update:", e)
