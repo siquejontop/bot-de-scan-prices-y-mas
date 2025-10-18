@@ -149,7 +149,7 @@ class AntiNuke(commands.Cog):
                         await self.log_action(role.guild, f"⛔ No tengo permisos para banear a {executor.mention}.")
                 break
 
-    # 🚨 Anti Permisos Peligrosos
+     # 🚨 Anti Permisos Peligrosos
     @commands.Cog.listener()
     async def on_guild_role_update(self, before, after):
         async for entry in after.guild.audit_logs(limit=5, action=discord.AuditLogAction.role_update):
@@ -159,13 +159,21 @@ class AntiNuke(commands.Cog):
                     return
                 dangerous = discord.Permissions(administrator=True, manage_guild=True, ban_members=True, kick_members=True)
                 if after.permissions.value & dangerous.value:
+                    # Verifica si el bot tiene el permiso manage_roles y está por encima del rol
+                    bot_member = after.guild.me
+                    if not bot_member.guild_permissions.manage_roles or bot_member.top_role <= after:
+                        await self.log_action(after.guild, f"⛔ No tengo permisos suficientes para revertir el rol {after.mention}.")
+                        return
+    
                     try:
                         await after.edit(permissions=before.permissions, reason="AntiNuke: permisos peligrosos detectados")
                         await after.guild.ban(executor, reason="AntiNuke: otorgó permisos peligrosos")
                         await self.log_action(after.guild, f"🚫 {executor.mention} baneado por otorgar permisos peligrosos al rol {after.mention}.")
                     except discord.Forbidden:
                         await self.log_action(after.guild, f"⛔ No tengo permisos para revertir el rol o banear a {executor.mention}.")
-                break
+                    except discord.HTTPException as e:
+                        await self.log_action(after.guild, f"⛔ Error al revertir permisos: {e}")
+                    break
 
     # 🚨 Anti Otorgar Rol Protegido
     @commands.Cog.listener()
