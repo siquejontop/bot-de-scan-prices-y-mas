@@ -1,373 +1,459 @@
 import discord
 from discord.ext import commands
 import datetime
+import logging
+from typing import List, Optional, Set, Union
+import re
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # ========================
-# 📌 Selector de roles
+# 📌 Role Selection View
 # ========================
 class RoleSelect(discord.ui.View):
-    def __init__(self, ctx, roles, member, action):
-        super().__init__(timeout=30)
+    """View for selecting a role from multiple matches."""
+    def __init__(self, ctx: commands.Context, roles: List[discord.Role], member: discord.Member, action: str):
+        super().__init__(timeout=60)  # Extended timeout for better UX
         self.ctx = ctx
         self.member = member
-        self.action = action  # "add", "remove" o "toggle"
+        self.action = action.lower()  # Normalize action
 
+        # Validate roles and limit to 25 (Discord select menu limit)
         options = [
-            discord.SelectOption(label=r.name, value=str(r.id))
-            for r in roles[:25]  # Discord permite máximo 25 opciones
+            discord.SelectOption(label=r.name, value=str(r.id), description=f"Position: {r.position}")
+            for r in roles[:25]
         ]
 
         self.select = discord.ui.Select(
-            placeholder="Elige un rol...",
-            options=options
+            placeholder="Select a role...",
+            options=options,
+            min_values=1,
+            max_values=1
         )
         self.select.callback = self.select_callback
         self.add_item(self.select)
 
     async def select_callback(self, interaction: discord.Interaction):
+        """Handle role selection."""
         if interaction.user != self.ctx.author:
             return await interaction.response.send_message(
-                "❌ Solo quien ejecutó el comando puede usar este menú.", ephemeral=True
+                "❌ Only the command issuer can use this menu.", ephemeral=True
             )
 
         role_id = int(self.select.values[0])
         role = self.ctx.guild.get_role(role_id)
-
-        # Validar jerarquía
         cog = self.ctx.bot.get_cog("Roles")
-        ok, error = cog.can_modify_role(ctx, self.member, role)
-        if not ok:
-            return await interaction.response.edit_message(
-                embed=discord.Embed(description=error, color=discord.Color.red()), view=None
-            )
-
+        
         try:
-            if self.action == "add":
-                await self.member.add_roles(role)
-                desc = f"➕ {self.ctx.author.mention} : Added {role.mention} to {self.member.mention}"
-                color = discord.Color.green()
-            elif self.action == "remove":
-                await self.member.remove_roles(role)
-                desc = f"➖ {self.ctx.author.mention} : Removed {role.mention} from {self.member.mention}"
-                color = discord.Color.red()
-            else:  # toggle
-                if role in self.member.roles:
-                    await self.member.remove_roles(role)
-                    desc = f"➖ {self.ctx.author.mention} : Removed {role.mention} from {self.member.mention}"
-                    color = discord.Color.red()
-                else:
-                    await self.member.add_roles(role)
-                    desc = f"➕ {self.ctx.author.mention} : Added {role.mention} to {self.member.mention}"
-                    color = discord.Color.green()
+            ok, error = await cog.validate_role_action(self.ctx, self.member, role, self.action)
+            if not ok:
+                return await interaction.response.edit_message(
+                    embed=discord.Embed(description=error, color=discord.Color.red()), view=None
+                )
 
-            embed = discord.Embed(description=desc, color=color)
-            await interaction.response.edit_message(embed=embed, view=None)
+            desc, color = await cog.perform_role_action(self.member, role, self.action)
+            await interaction.response.edit_message(
+                embed=discord.Embed(description=desc, color=color), view=None
+            )
+            logger.info(f"Role {self.action} executed by {self.ctx.author} for {self.member}: {role.name}")
 
         except discord.Forbidden:
             await interaction.response.edit_message(
-                embed=discord.Embed(description="❌ No tengo permisos suficientes.", color=discord.Color.red()), view=None
+                embed=discord.Embed(description="❌ Insufficient permissions.", color=discord.Color.red()), view=None
             )
         except discord.HTTPException as e:
             await interaction.response.edit_message(
-                embed=discord.Embed(description=f"❌ Error al modificar el rol: {e}", color=discord.Color.red()), view=None
+                embed=discord.Embed(description=f"❌ Error: {e}", color=discord.Color.red()), view=None
             )
+            logger.error(f"Error in role {self.action}: {e}")
 
 # ========================
-# 📜 Cog principal
+# 📜 Roles Paginator View
 # ========================
 class RolesPaginator(discord.ui.View):
-    def __init__(self, roles):
-        super().__init__(timeout=60)
+    """View for paginating through server roles."""
+    def __init__(self, roles: List[discord.Role], chunk_size: int = 10):
+        super().__init__(timeout=120)
         self.roles = roles
         self.page = 0
-        self.chunk_size = 10
+        self.chunk_size = chunk_size
 
-    def get_page_content(self):
+    def get_page_content(self) -> discord.Embed:
+        """Generate embed for current page of roles."""
         start = self.page * self.chunk_size
         end = start + self.chunk_size
         chunk = self.roles[start:end]
 
         description = "\n".join(
-            [f"**{i+1}.** {r.mention}" for i, r in enumerate(chunk, start=start)]
-        ) or "No hay roles en esta página."
+            [f"**{i+1}.** {r.mention} (ID: {r.id})" for i, r in enumerate(chunk, start=start)]
+        ) or "No roles on this page."
 
         embed = discord.Embed(
-            title="📜 Roles",
+            title="📜 Server Roles",
             description=description,
-            color=discord.Color.blurple()
+            color=discord.Color.blurple(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc)
         )
         embed.set_footer(
-            text=f"Página {self.page+1}/{(len(self.roles)-1)//self.chunk_size+1} "
-                 f"({len(self.roles)} roles en total)"
+            text=f"Page {self.page+1}/{max(1, (len(self.roles)-1)//self.chunk_size+1)} "
+                 f"({len(self.roles)} roles total)"
         )
         return embed
 
-    @discord.ui.button(label="⬅️", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label="⬅️ Previous", style=discord.ButtonStyle.secondary)
     async def previous_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Navigate to previous page."""
         if self.page > 0:
             self.page -= 1
             await interaction.response.edit_message(embed=self.get_page_content(), view=self)
 
-    @discord.ui.button(label="➡️", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label="Next ➡️", style=discord.ButtonStyle.secondary)
     async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Navigate to next page."""
         if (self.page + 1) * self.chunk_size < len(self.roles):
             self.page += 1
             await interaction.response.edit_message(embed=self.get_page_content(), view=self)
 
-    @discord.ui.button(label="❌", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="❌ Close", style=discord.ButtonStyle.danger)
     async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Delete the paginator message."""
         await interaction.message.delete()
 
+# ========================
+# 📜 Roles Cog
+# ========================
 class Roles(commands.Cog):
-    def __init__(self, bot):
+    """Cog for managing Discord server roles."""
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.owner_id = 335596693603090434  # 👑 ID del dueño del bot
+        self.owner_id = 335596693603090434  # Bot owner ID
+        logger.info("Roles cog initialized")
 
-    # ========================
-    # 📜 Ver roles con páginas
-    # ========================
-    @commands.command(name="roles")
-    async def roles(self, ctx):
-        roles = ctx.guild.roles[1:]  # Quitamos @everyone
-        roles = sorted(roles, key=lambda r: r.position, reverse=True)
-
-        if not roles:
-            return await ctx.send("❌ Este servidor no tiene roles aparte de @everyone.")
-
-        view = RolesPaginator(roles)
-        await ctx.send(embed=view.get_page_content(), view=view)
-
-    # ========================
-    # Función auxiliar: validar jerarquía
-    # ========================
-    def can_modify_role(self, ctx, member: discord.Member, role: discord.Role):
+    async def validate_role_action(self, ctx: commands.Context, member: discord.Member, 
+                                role: discord.Role, action: str) -> tuple[bool, Optional[str]]:
+        """Validate if a role action can be performed."""
         author = ctx.author
         bot_member = ctx.guild.me
 
-        # ✅ Bypass total si es el dueño del bot
+        # Bot owner bypass
         if author.id == self.owner_id and member == author:
             return True, None
 
-        if member == author:
-            if role == author.top_role:
-                return False, f"❌ No puedes asignarte tu mismo rol ({role.mention})."
-            if role >= author.top_role:
-                return False, f"❌ No puedes asignarte un rol superior o igual al tuyo ({role.mention})."
-        else:
-            if member.top_role >= author.top_role:
-                return False, f"❌ No puedes modificar a alguien con un rol superior o igual al tuyo ({member.top_role.mention})."
+        # Prevent self-assignment of top role or higher
+        if member == author and role >= author.top_role:
+            return False, f"❌ Cannot assign/remove a role equal to or higher than your top role ({role.mention})."
 
+        # Check if target's top role is higher than author's
+        if member != author and member.top_role >= author.top_role:
+            return False, f"❌ Cannot modify roles for someone with a higher or equal top role ({member.top_role.mention})."
+
+        # Check bot's role hierarchy
         if role >= bot_member.top_role:
-            return False, f"❌ No puedo asignar/quitar un rol superior o igual al mío ({bot_member.top_role.mention})."
+            return False, f"❌ Cannot modify a role higher than or equal to my top role ({bot_member.top_role.mention})."
+
+        # Validate action
+        if action not in ("add", "remove", "toggle"):
+            return False, "❌ Invalid action specified."
 
         return True, None
 
-    # ========================
-    # Función auxiliar: buscar rol (coincidencia parcial)
-    # ========================
-    def find_role(self, ctx, role_arg: str):
+    async def perform_role_action(self, member: discord.Member, role: discord.Role, 
+                               action: str) -> tuple[str, discord.Color]:
+        """Perform the specified role action."""
+        if action == "add":
+            await member.add_roles(role)
+            return f"➕ {member.mention} now has {role.mention}", discord.Color.green()
+        elif action == "remove":
+            await member.remove_roles(role)
+            return f"➖ {member.mention} no longer has {role.mention}", discord.Color.red()
+        else:  # toggle
+            if role in member.roles:
+                await member.remove_roles(role)
+                return f"➖ {member.mention} no longer has {role.mention}", discord.Color.red()
+            else:
+                await member.add_roles(role)
+                return f"➕ {member.mention} now has {role.mention}", discord.Color.green()
+
+    def find_role(self, ctx: commands.Context, role_arg: str) -> Union[discord.Role, List[discord.Role], None]:
+        """Find a role by ID or partial name match."""
+        role_arg = role_arg.strip()
         if role_arg.isdigit():
             return ctx.guild.get_role(int(role_arg))
+        
         role_arg = role_arg.lower()
         matches = [r for r in ctx.guild.roles if role_arg in r.name.lower()]
         return matches[0] if len(matches) == 1 else matches if matches else None
 
-    # ========================
-    # Función auxiliar: buscar usuario
-    # ========================
-    def find_member(self, ctx, member_arg: str):
+    def find_member(self, ctx: commands.Context, member_arg: str) -> Optional[discord.Member]:
+        """Find a member by ID, mention, or name."""
+        member_arg = member_arg.strip()
         if member_arg.isdigit() or member_arg.startswith("<@"):
-            return ctx.guild.get_member(int(member_arg.replace("<@", "").replace(">", "")))
+            member_id = int(re.sub(r"[<@!>]", "", member_arg))
+            return ctx.guild.get_member(member_id)
         return discord.utils.find(
             lambda m: m.name.lower() == member_arg.lower() or (m.nick and m.nick.lower() == member_arg.lower()),
             ctx.guild.members
         )
 
-    # ========================
-    # ➕ Añadir rol
-    # ========================
+    @commands.command(name="roles")
+    async def roles(self, ctx: commands.Context):
+        """Display all server roles with pagination."""
+        roles = sorted(ctx.guild.roles[1:], key=lambda r: r.position, reverse=True)
+        if not roles:
+            return await ctx.send(embed=discord.Embed(
+                description="❌ No roles found (excluding @everyone).",
+                color=discord.Color.red()
+            ))
+
+        view = RolesPaginator(roles)
+        await ctx.send(embed=view.get_page_content(), view=view)
+        logger.info(f"Roles command executed by {ctx.author} in {ctx.guild}")
+
     @commands.command(name="addrole", aliases=["addr", "ar"])
     @commands.has_permissions(manage_roles=True)
-    async def addrole(self, ctx, member_arg: str, *, role_arg: str):
+    async def addrole(self, ctx: commands.Context, member_arg: str, *, role_arg: str):
+        """Add a role to a member."""
         member = self.find_member(ctx, member_arg)
         if not member:
-            return await ctx.send(embed=discord.Embed(description=f"❌ No encontré el usuario **{member_arg}**.", color=discord.Color.red()))
+            return await ctx.send(embed=discord.Embed(
+                description=f"❌ User **{member_arg}** not found.",
+                color=discord.Color.red()
+            ))
 
         role = self.find_role(ctx, role_arg)
         if not role:
-            return await ctx.send(embed=discord.Embed(description=f"❌ No encontré el rol **{role_arg}**.", color=discord.Color.red()))
+            return await ctx.send(embed=discord.Embed(
+                description=f"❌ Role **{role_arg}** not found.",
+                color=discord.Color.red()
+            ))
         if isinstance(role, list):
-            return await ctx.send("🔎 Se encontraron múltiples roles, elige uno:", view=RoleSelect(ctx, role, member, "add"))
+            return await ctx.send("🔎 Multiple roles found, select one:", view=RoleSelect(ctx, role, member, "add"))
 
-        ok, error = self.can_modify_role(ctx, member, role)
+        ok, error = await self.validate_role_action(ctx, member, role, "add")
         if not ok:
             return await ctx.send(embed=discord.Embed(description=error, color=discord.Color.red()))
 
         try:
-            await member.add_roles(role)
-            embed = discord.Embed(description=f"➕ {ctx.author.mention} : Added {role.mention} to {member.mention}", color=discord.Color.green())
-            await ctx.send(embed=embed)
+            desc, color = await self.perform_role_action(member, role, "add")
+            await ctx.send(embed=discord.Embed(description=desc, color=color))
+            logger.info(f"Role added by {ctx.author} to {member}: {role.name}")
         except discord.Forbidden:
-            await ctx.send("❌ No tengo permisos suficientes para asignar ese rol.")
+            await ctx.send(embed=discord.Embed(
+                description="❌ Insufficient permissions to assign role.",
+                color=discord.Color.red()
+            ))
         except discord.HTTPException as e:
-            await ctx.send(embed=discord.Embed(description=f"❌ Error al asignar el rol: {e}", color=discord.Color.red()))
+            await ctx.send(embed=discord.Embed(
+                description=f"❌ Error assigning role: {e}",
+                color=discord.Color.red()
+            ))
+            logger.error(f"Error adding role: {e}")
 
-    # ========================
-    # ➕ Añadir múltiples roles
-    # ========================
     @commands.command(name="addroles", aliases=["addrs", "ars"])
     @commands.has_permissions(manage_roles=True)
-    async def addroles(self, ctx, member_arg: str, *, roles_arg: str):
+    async def addroles(self, ctx: commands.Context, member_arg: str, *, roles_arg: str):
+        """Add multiple roles to a member."""
         member = self.find_member(ctx, member_arg)
         if not member:
-            return await ctx.send(embed=discord.Embed(description=f"❌ No encontré el usuario **{member_arg}**.", color=discord.Color.red()))
+            return await ctx.send(embed=discord.Embed(
+                description=f"❌ User **{member_arg}** not found.",
+                color=discord.Color.red()
+            ))
 
         role_names = [r.strip() for r in roles_arg.split(",")]
-        roles = []
+        roles: List[discord.Role] = []
         for role_arg in role_names:
             role = self.find_role(ctx, role_arg)
             if not role:
-                return await ctx.send(embed=discord.Embed(description=f"❌ No encontré el rol **{role_arg}**.", color=discord.Color.red()))
+                return await ctx.send(embed=discord.Embed(
+                    description=f"❌ Role **{role_arg}** not found.",
+                    color=discord.Color.red()
+                ))
             if isinstance(role, list):
-                return await ctx.send(f"🔎 Múltiples roles encontrados para **{role_arg}**, elige uno:", view=RoleSelect(ctx, role, member, "add"))
+                return await ctx.send(f"🔎 Multiple roles found for **{role_arg}**:", view=RoleSelect(ctx, role, member, "add"))
             roles.append(role)
 
         for role in roles:
-            ok, error = self.can_modify_role(ctx, member, role)
+            ok, error = await self.validate_role_action(ctx, member, role, "add")
             if not ok:
                 return await ctx.send(embed=discord.Embed(description=error, color=discord.Color.red()))
 
         try:
             await member.add_roles(*roles)
             roles_mention = ", ".join([role.mention for role in roles])
-            embed = discord.Embed(description=f"➕ {ctx.author.mention} : Added {roles_mention} to {member.mention}", color=discord.Color.green())
+            embed = discord.Embed(
+                description=f"➕ {ctx.author.mention} added {roles_mention} to {member.mention}",
+                color=discord.Color.green()
+            )
             await ctx.send(embed=embed)
+            logger.info(f"Multiple roles added by {ctx.author} to {member}: {roles_mention}")
         except discord.Forbidden:
-            await ctx.send("❌ No tengo permisos suficientes para asignar esos roles.")
+            await ctx.send(embed=discord.Embed(
+                description="❌ Insufficient permissions to assign roles.",
+                color=discord.Color.red()
+            ))
         except discord.HTTPException as e:
-            await ctx.send(embed=discord.Embed(description=f"❌ Error al asignar los roles: {e}", color=discord.Color.red()))
+            await ctx.send(embed=discord.Embed(
+                description=f"❌ Error assigning roles: {e}",
+                color=discord.Color.red()
+            ))
+            logger.error(f"Error adding multiple roles: {e}")
 
-    # ========================
-    # ➖ Quitar rol
-    # ========================
     @commands.command(name="removerole", aliases=["delrole", "rr", "dr"])
     @commands.has_permissions(manage_roles=True)
-    async def removerole(self, ctx, member_arg: str, *, role_arg: str):
+    async def removerole(self, ctx: commands.Context, member_arg: str, *, role_arg: str):
+        """Remove a role from a member."""
         member = self.find_member(ctx, member_arg)
         if not member:
-            return await ctx.send(embed=discord.Embed(description=f"❌ No encontré el usuario **{member_arg}**.", color=discord.Color.red()))
+            return await ctx.send(embed=discord.Embed(
+                description=f"❌ User **{member_arg}** not found.",
+                color=discord.Color.red()
+            ))
 
         role = self.find_role(ctx, role_arg)
         if not role:
-            return await ctx.send(embed=discord.Embed(description=f"❌ No encontré el rol **{role_arg}**.", color=discord.Color.red()))
+            return await ctx.send(embed=discord.Embed(
+                description=f"❌ Role **{role_arg}** not found.",
+                color=discord.Color.red()
+            ))
         if isinstance(role, list):
-            return await ctx.send("🔎 Se encontraron múltiples roles, elige uno:", view=RoleSelect(ctx, role, member, "remove"))
+            return await ctx.send("🔎 Multiple roles found, select one:", view=RoleSelect(ctx, role, member, "remove"))
 
-        ok, error = self.can_modify_role(ctx, member, role)
+        ok, error = await self.validate_role_action(ctx, member, role, "remove")
         if not ok:
             return await ctx.send(embed=discord.Embed(description=error, color=discord.Color.red()))
 
         try:
-            await member.remove_roles(role)
-            embed = discord.Embed(description=f"➖ {ctx.author.mention} : Removed {role.mention} from {member.mention}", color=discord.Color.red())
-            await ctx.send(embed=embed)
+            desc, color = await self.perform_role_action(member, role, "remove")
+            await ctx.send(embed=discord.Embed(description=desc, color=color))
+            logger.info(f"Role removed by {ctx.author} from {member}: {role.name}")
         except discord.Forbidden:
-            await ctx.send("❌ No tengo permisos suficientes para quitar ese rol.")
+            await ctx.send(embed=discord.Embed(
+                description="❌ Insufficient permissions to remove role.",
+                color=discord.Color.red()
+            ))
         except discord.HTTPException as e:
-            await ctx.send(embed=discord.Embed(description=f"❌ Error al quitar el rol: {e}", color=discord.Color.red()))
+            await ctx.send(embed=discord.Embed(
+                description=f"❌ Error removing role: {e}",
+                color=discord.Color.red()
+            ))
+            logger.error(f"Error removing role: {e}")
 
-    # ========================
-    # 🗑️ Quitar todos los roles
-    # ========================
     @commands.command(name="purgeroles", aliases=["clearroles", "pr"])
     @commands.has_permissions(manage_roles=True)
-    async def purgeroles(self, ctx, member_arg: str):
+    async def purgeroles(self, ctx: commands.Context, member_arg: str):
+        """Remove all roles from a member (except @everyone)."""
         member = self.find_member(ctx, member_arg)
         if not member:
-            return await ctx.send(embed=discord.Embed(description=f"❌ No encontré el usuario **{member_arg}**.", color=discord.Color.red()))
+            return await ctx.send(embed=discord.Embed(
+                description=f"❌ User **{member_arg}** not found.",
+                color=discord.Color.red()
+            ))
 
         roles_to_remove = [role for role in member.roles if role != ctx.guild.default_role]
+        if not roles_to_remove:
+            return await ctx.send(embed=discord.Embed(
+                description=f"ℹ️ {member.mention} has no roles to remove.",
+                color=discord.Color.blurple()
+            ))
 
         for role in roles_to_remove:
-            ok, error = self.can_modify_role(ctx, member, role)
+            ok, error = await self.validate_role_action(ctx, member, role, "remove")
             if not ok:
                 return await ctx.send(embed=discord.Embed(description=error, color=discord.Color.red()))
 
         try:
-            if roles_to_remove:
-                await member.remove_roles(*roles_to_remove)
-                embed = discord.Embed(description=f"🗑️ {ctx.author.mention} : Removed all roles from {member.mention}", color=discord.Color.red())
-            else:
-                embed = discord.Embed(description=f"ℹ️ {member.mention} no tiene roles para quitar.", color=discord.Color.blurple())
+            await member.remove_roles(*roles_to_remove)
+            embed = discord.Embed(
+                description=f"🗑️ {ctx.author.mention} removed all roles from {member.mention}",
+                color=discord.Color.red()
+            )
             await ctx.send(embed=embed)
+            logger.info(f"All roles removed by {ctx.author} from {member}")
         except discord.Forbidden:
-            await ctx.send("❌ No tengo permisos suficientes para quitar esos roles.")
+            await ctx.send(embed=discord.Embed(
+                description="❌ Insufficient permissions to remove roles.",
+                color=discord.Color.red()
+            ))
         except discord.HTTPException as e:
-            await ctx.send(embed=discord.Embed(description=f"❌ Error al quitar los roles: {e}", color=discord.Color.red()))
+            await ctx.send(embed=discord.Embed(
+                description=f"❌ Error removing roles: {e}",
+                color=discord.Color.red()
+            ))
+            logger.error(f"Error purging roles: {e}")
 
-    # ========================
-    # 🔄 Toggle rol
-    # ========================
-    @commands.command(name="r", aliases=["role"])
+    @commands.command(name="togglerole", aliases=["r", "role"])
     @commands.has_permissions(manage_roles=True)
-    async def toggle_role(self, ctx, member_arg: str, *, role_arg: str):
+    async def toggle_role(self, ctx: commands.Context, member_arg: str, *, role_arg: str):
+        """Toggle a role for a member."""
         member = self.find_member(ctx, member_arg)
         if not member:
-            return await ctx.send(embed=discord.Embed(description=f"❌ No encontré el usuario **{member_arg}**.", color=discord.Color.red()))
+            return await ctx.send(embed=discord.Embed(
+                description=f"❌ User **{member_arg}** not found.",
+                color=discord.Color.red()
+            ))
 
         role = self.find_role(ctx, role_arg)
         if not role:
-            return await ctx.send(embed=discord.Embed(description=f"❌ No encontré el rol **{role_arg}**.", color=discord.Color.red()))
+            return await ctx.send(embed=discord.Embed(
+                description=f"❌ Role **{role_arg}** not found.",
+                color=discord.Color.red()
+            ))
         if isinstance(role, list):
-            return await ctx.send("🔎 Se encontraron múltiples roles, elige uno:", view=RoleSelect(ctx, role, member, "toggle"))
+            return await ctx.send("🔎 Multiple roles found, select one:", view=RoleSelect(ctx, role, member, "toggle"))
 
-        ok, error = self.can_modify_role(ctx, member, role)
+        ok, error = await self.validate_role_action(ctx, member, role, "toggle")
         if not ok:
             return await ctx.send(embed=discord.Embed(description=error, color=discord.Color.red()))
 
         try:
-            if role in member.roles:
-                await member.remove_roles(role)
-                embed = discord.Embed(description=f"➖ {ctx.author.mention} : Removed {role.mention} from {member.mention}", color=discord.Color.red())
-            else:
-                await member.add_roles(role)
-                embed = discord.Embed(description=f"➕ {ctx.author.mention} : Added {role.mention} to {member.mention}", color=discord.Color.green())
-            await ctx.send(embed=embed)
+            desc, color = await self.perform_role_action(member, role, "toggle")
+            await ctx.send(embed=discord.Embed(description=desc, color=color))
+            logger.info(f"Role toggled by {ctx.author} for {member}: {role.name}")
         except discord.Forbidden:
-            await ctx.send("❌ No tengo permisos suficientes para modificar ese rol.")
+            await ctx.send(embed=discord.Embed(
+                description="❌ Insufficient permissions to modify role.",
+                color=discord.Color.red()
+            ))
         except discord.HTTPException as e:
-            await ctx.send(embed=discord.Embed(description=f"❌ Error al modificar el rol: {e}", color=discord.Color.red()))
+            await ctx.send(embed=discord.Embed(
+                description=f"❌ Error modifying role: {e}",
+                color=discord.Color.red()
+            ))
+            logger.error(f"Error toggling role: {e}")
 
-    # ========================
-    # 🕰️ Restaurar roles de hace 1 hora
-    # ========================
     @commands.command(name="restoreroles", aliases=["rrs", "restorer"])
     @commands.has_permissions(manage_roles=True)
-    async def restoreroles(self, ctx, member_arg: str):
+    async def restoreroles(self, ctx: commands.Context, member_arg: str):
+        """Restore roles from the last hour's audit log."""
         member = self.find_member(ctx, member_arg)
         if not member:
-            return await ctx.send(embed=discord.Embed(description=f"❌ No encontré el usuario **{member_arg}**.", color=discord.Color.red()))
+            return await ctx.send(embed=discord.Embed(
+                description=f"❌ User **{member_arg}** not found.",
+                color=discord.Color.red()
+            ))
 
-        # Obtener registros de auditoría de los últimos 60 minutos
         after_time = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=1)
         role_changes = []
-        async for entry in ctx.guild.audit_logs(limit=100, after=after_time):
-            if entry.action == discord.AuditLogAction.member_role_update and entry.target.id == member.id:
+        async for entry in ctx.guild.audit_logs(limit=100, after=after_time, action=discord.AuditLogAction.member_role_update):
+            if entry.target.id == member.id:
                 role_changes.append(entry)
 
         if not role_changes:
-            return await ctx.send(embed=discord.Embed(description=f"ℹ️ No se encontraron cambios de roles para {member.mention} en la última hora.", color=discord.Color.blurple()))
+            return await ctx.send(embed=discord.Embed(
+                description=f"ℹ️ No role changes found for {member.mention} in the last hour.",
+                color=discord.Color.blurple()
+            ))
 
-        # Usar el estado más antiguo como base para restaurar
-        target_roles = set(role_changes[0].before.roles) if role_changes and role_changes[0].before else set(member.roles) - {ctx.guild.default_role}
-        current_roles = set(member.roles) - {ctx.guild.default_role}
-
+        target_roles: Set[discord.Role] = set(role_changes[0].before.roles) if role_changes[0].before else set(member.roles) - {ctx.guild.default_role}
+        current_roles: Set[discord.Role] = set(member.roles) - {ctx.guild.default_role}
         roles_to_add = target_roles - current_roles
         roles_to_remove = current_roles - target_roles
 
-        # Validar jerarquía para cada rol
         for role in roles_to_add | roles_to_remove:
-            ok, error = self.can_modify_role(ctx, member, role)
+            ok, error = await self.validate_role_action(ctx, member, role, "toggle")
             if not ok:
                 return await ctx.send(embed=discord.Embed(description=error, color=discord.Color.red()))
 
@@ -377,70 +463,114 @@ class Roles(commands.Cog):
                     await member.remove_roles(*roles_to_remove)
                 if roles_to_add:
                     await member.add_roles(*roles_to_add)
-                roles_added_str = ", ".join([role.mention for role in roles_to_add]) if roles_to_add else "ninguno"
-                roles_removed_str = ", ".join([role.mention for role in roles_to_remove]) if roles_to_remove else "ninguno"
+                roles_added_str = ", ".join([role.mention for role in roles_to_add]) if roles_to_add else "none"
+                roles_removed_str = ", ".join([role.mention for role in roles_to_remove]) if roles_to_remove else "none"
                 embed = discord.Embed(
-                    description=f"🕰️ {ctx.author.mention} : Restaurados roles de {member.mention}\n**Añadidos**: {roles_added_str}\n**Quitados**: {roles_removed_str}",
+                    description=f"🕰️ {ctx.author.mention} restored roles for {member.mention}\n**Added**: {roles_added_str}\n**Removed**: {roles_removed_str}",
                     color=discord.Color.green()
                 )
             else:
-                embed = discord.Embed(description=f"ℹ️ No se necesitaron cambios para restaurar los roles de {member.mention}.", color=discord.Color.blurple())
+                embed = discord.Embed(
+                    description=f"ℹ️ No changes needed to restore roles for {member.mention}.",
+                    color=discord.Color.blurple()
+                )
             await ctx.send(embed=embed)
+            logger.info(f"Roles restored by {ctx.author} for {member}")
         except discord.Forbidden:
-            await ctx.send("❌ No tengo permisos suficientes para restaurar los roles.")
+            await ctx.send(embed=discord.Embed(
+                description="❌ Insufficient permissions to restore roles.",
+                color=discord.Color.red()
+            ))
         except discord.HTTPException as e:
-            await ctx.send(embed=discord.Embed(description=f"❌ Error al restaurar roles: {e}", color=discord.Color.red()))
+            await ctx.send(embed=discord.Embed(
+                description=f"❌ Error restoring roles: {e}",
+                color=discord.Color.red()
+            ))
+            logger.error(f"Error restoring roles: {e}")
 
-    # ========================
-    # 🖼️ Cambiar icono de rol (solo emoji Unicode)
-    # ========================
-    @commands.command(name="roleicon", aliases=["ricon"])
+    @commands.command(name="createrole", aliases=["cr", "newrole"])
     @commands.has_permissions(manage_roles=True)
-    async def roleicon(self, ctx, role_arg: str = None, emoji: str = None):
-        if not role_arg or not emoji:
-            return await ctx.send(
-                embed=discord.Embed(
-                    description="❌ Sintaxis incorrecta.\nUsa: `a!roleicon <rol> <emoji>`",
-                    color=discord.Color.red()
-                )
-            )
+    async def createrole(self, ctx: commands.Context, name: str, color: str = None, hoist: bool = False, mentionable: bool = False):
+        """Create a new role with specified properties."""
+        try:
+            # Parse color if provided (hex or RGB)
+            role_color = discord.Color.default()
+            if color:
+                if color.startswith("#"):
+                    color = color.lstrip("#")
+                    role_color = discord.Color(int(color, 16))
+                elif "," in color:
+                    r, g, b = map(int, color.split(","))
+                    role_color = discord.Color.from_rgb(r, g, b)
 
+            role = await ctx.guild.create_role(
+                name=name[:100],  # Discord role name limit
+                color=role_color,
+                hoist=hoist,
+                mentionable=mentionable,
+                reason=f"Role created by {ctx.author}"
+            )
+            embed = discord.Embed(
+                description=f"✅ Created role {role.mention} successfully!",
+                color=discord.Color.green()
+            )
+            await ctx.send(embed=embed)
+            logger.info(f"Role {name} created by {ctx.author}")
+        except (ValueError, discord.InvalidArgument):
+            await ctx.send(embed=discord.Embed(
+                description="❌ Invalid color format. Use hex (#FF0000) or RGB (255,0,0).",
+                color=discord.Color.red()
+            ))
+        except discord.Forbidden:
+            await ctx.send(embed=discord.Embed(
+                description="❌ Insufficient permissions to create role.",
+                color=discord.Color.red()
+            ))
+        except discord.HTTPException as e:
+            await ctx.send(embed=discord.Embed(
+                description=f"❌ Error creating role: {e}",
+                color=discord.Color.red()
+            ))
+            logger.error(f"Error creating role: {e}")
+
+    @commands.command(name="deleterole", aliases=["dr", "delrole"])
+    @commands.has_permissions(manage_roles=True)
+    async def deleterole(self, ctx: commands.Context, *, role_arg: str):
+        """Delete a specified role."""
         role = self.find_role(ctx, role_arg)
-        if not role or isinstance(role, list):
-            return await ctx.send(
-                embed=discord.Embed(
-                    description=f"❌ No encontré el rol **{role_arg}**.",
-                    color=discord.Color.red()
-                )
-            )
+        if not role:
+            return await ctx.send(embed=discord.Embed(
+                description=f"❌ Role **{role_arg}** not found.",
+                color=discord.Color.red()
+            ))
+        if isinstance(role, list):
+            return await ctx.send("🔎 Multiple roles found, select one:", view=RoleSelect(ctx, role, ctx.author, "delete"))
 
-        ok, error = self.can_modify_role(ctx, ctx.author, role)  # Usamos ctx.author para validación
+        ok, error = await self.validate_role_action(ctx, ctx.author, role, "delete")
         if not ok:
             return await ctx.send(embed=discord.Embed(description=error, color=discord.Color.red()))
 
         try:
-            # Remove the unicode_emoji parameter since it's not supported
-            await role.edit(reason=f"Roleicon cambiado por {ctx.author}")
+            await role.delete(reason=f"Role deleted by {ctx.author}")
             embed = discord.Embed(
-                description=f"✅ El rol {role.mention} ahora tiene el icono {emoji}",
-                color=discord.Color.green()
+                description=f"🗑️ Role {role.name} deleted successfully.",
+                color=discord.Color.red()
             )
             await ctx.send(embed=embed)
+            logger.info(f"Role {role.name} deleted by {ctx.author}")
         except discord.Forbidden:
-            await ctx.send(
-                embed=discord.Embed(
-                    description="❌ No tengo permisos suficientes para editar ese rol.",
-                    color=discord.Color.red()
-                )
-            )
+            await ctx.send(embed=discord.Embed(
+                description="❌ Insufficient permissions to delete role.",
+                color=discord.Color.red()
+            ))
         except discord.HTTPException as e:
-            await ctx.send(
-                embed=discord.Embed(
-                    description=f"❌ Error al editar el rol: {e}",
-                    color=discord.Color.red()
-                )
-            )
+            await ctx.send(embed=discord.Embed(
+                description=f"❌ Error deleting role: {e}",
+                color=discord.Color.red()
+            ))
+            logger.error(f"Error deleting role: {e}")
 
-# 👇 Obligatorio para que Render cargue el cog
-async def setup(bot):
+async def setup(bot: commands.Bot):
+    """Load the Roles cog."""
     await bot.add_cog(Roles(bot))
+    logger.info("Roles cog loaded")
