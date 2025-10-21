@@ -154,7 +154,7 @@ class Roles(commands.Cog):
             return False, f"❌ Cannot modify a role higher than or equal to my top role ({bot_member.top_role.mention})."
 
         # Validate action
-        if action not in ("add", "remove", "toggle"):
+        if action not in ("add", "remove", "toggle", "delete"):
             return False, "❌ Invalid action specified."
 
         return True, None
@@ -301,7 +301,7 @@ class Roles(commands.Cog):
             ))
             logger.error(f"Error adding multiple roles: {e}")
 
-    @commands.command(name="removerole", aliases=["delrole", "rr", "dr"])
+    @commands.command(name="removerole", aliases=["rr", "remrole"])
     @commands.has_permissions(manage_roles=True)
     async def removerole(self, ctx: commands.Context, member_arg: str, *, role_arg: str):
         """Remove a role from a member."""
@@ -533,7 +533,7 @@ class Roles(commands.Cog):
             ))
             logger.error(f"Error creating role: {e}")
 
-    @commands.command(name="deleterole", aliases=["dr", "delrole"])
+    @commands.command(name="deleterole", aliases=["deleter", "rmrole"])
     @commands.has_permissions(manage_roles=True)
     async def deleterole(self, ctx: commands.Context, *, role_arg: str):
         """Delete a specified role."""
