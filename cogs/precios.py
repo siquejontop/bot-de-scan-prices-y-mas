@@ -132,7 +132,7 @@ class Precios(commands.Cog):
 
     @commands.command(name="precio", aliases=["price", "cost", "valor"])
     async def precio(self, ctx, nombre: str = None, m: float = None):
-        """Calculate the price for a given item and amount in millions."""
+        """Calcula el precio de cada objeto en sab en millones a dolares."""
         if not nombre:
             return await ctx.send(embed=self.error_embed(
                 ctx, f"Debes especificar el nombre. Ejemplo: `{ctx.prefix}{ctx.command} lagrandecombinasion 100`"
@@ -159,7 +159,7 @@ class Precios(commands.Cog):
 
     @commands.command(name="helpprices")
     async def helpprices(self, ctx):
-        """Display a paginated list of available pricing formulas and aliases."""
+        """Despliega una lista completa de todos los precios."""
         formulas_items = list(self.formulas.items())
         embeds = []
         prefixes = ["precio", "valor", "cost", "price"]
