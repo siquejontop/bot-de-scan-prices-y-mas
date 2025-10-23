@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+import asyncio
 
 # ============================================================
 # 🧮 Precios Cog
@@ -13,26 +14,19 @@ class Precios(commands.Cog):
 
         # 🔥 Pricing formulas (base, multiplier, constant, formula string, display name)
         self.formulas = {
-            "loscombinasionas": (15, 0.06, 2, "(M − 15) × 0.06 + 2", "Los combinasionas"),
-            "esoksekolah": (30, 0.04, 2, "(M − 30) × 0.04 + 2", "Esok sekolah"),
-            "losbros": (24, 0.05, 2.5, "(M − 24) × 0.05 + 2.5", "Los bros"),
-            "lagrandecombinasion": (10, 0.07, 3, "(M − 10) × 0.07 + 3", "La grande combinasion"),
-            "loshotspositos": (20, 0.05, 3.5, "(M − 20) × 0.05 + 3.5", "Los hotspositos"),
-            "ketupatkepat": (35, 0.04, 10, "(M − 35) × 0.04 + 10", "Ketupat kepat"),
-            "tralaledon": (27.5, 0.04, 11, "(M − 27.5) × 0.04 + 11", "Tralaledon"),
-            "ketchuruandmusturu": (42.5, 0.08, 11.5, "(M − 42.5) × 0.08 + 11.5", "Ketchuru and musturu"),
-            "nuclearodinossauro": (15, 0.10, 12, "(M − 15) × 0.10 + 12", "Nuclearo dinossauro"),
-            "lasupremecombinasion": (40, 0.11, 15, "(M − 40) × 0.11 + 15", "La supreme combinasion"),
-            "tacoritabicicleta": (16.5, 0.04, 2, "(M − 16.5) × 0.04 + 2", "Tacorita bicicleta"),
-            "laextinctgrande": (23.5, 0.04, 3, "(M − 23.5) × 0.04 + 3", "La extinct grande"),
-            "lassis": (17.5, 0.03, 3, "(M − 17.5) × 0.03 + 3", "Las sis"),
-            "losprimos": (31, 0.03, 4, "(M − 31) × 0.03 + 4", "Los primos"),
-            "lostacoritas": (32, 0.04, 3.5, "(M − 32) × 0.04 + 3.5", "Los tacoritas"),
-            "celularciniviciosini": (22.5, 0.06, 5, "(M − 22.5) × 0.06 + 5", "Celularcini viciosini"),
-            "spaghettitualetti": (60, 0.03, 7, "(M − 60) × 0.03 + 7", "Spaghetti tualetti"),
-            "tictacsahur": (37.5, 0.06, 8, "(M − 37.5) × 0.06 + 8", "Tictac sahur"),
-            "garamaandmadundung": (50, 0.08, 20, "(M − 50) × 0.08 + 20", "Garama and madundung"),
-            "dragoncannelloni": (200, 0.30, 125, "(M − 200) × 0.30 + 125", "Dragon cannelloni"),
+            # ✅ Actualizados
+            "loscombinasionas": (15, 0.03, 1.5, "(M − 15) × 0.03 + 1.5", "Los combinasionas"),
+            "esoksekolah": (30, 0.03, 1, "(M − 30) × 0.03 + 1", "Esok sekolah"),
+            "losbros": (24, 0.02, 3, "(M − 24) × 0.02 + 3", "Los bros"),
+            "lagrandecombinasion": (10, 0.03, 1.5, "(M − 10) × 0.03 + 1.5", "La grande combinasion"),
+            "loshotspositos": (20, 0.04, 2.5, "(M − 20) × 0.04 + 2.5", "Los hotspositos"),
+            "ketupatkepat": (35, 0.04, 8, "(M − 35) × 0.04 + 8", "Ketupat kepat"),
+            "tralaledon": (27.5, 0.03, 10, "(M − 27.5) × 0.03 + 10", "Tralaledon"),
+            "ketchuruandmusturu": (42.5, 0.06, 12, "(M − 42.5) × 0.06 + 12", "Ketchuru and musturu"),
+            "nuclearodinossauro": (15, 0.05, 8, "(M − 15) × 0.05 + 8", "Nuclearo dinossauro"),
+            "lasupremecombinasion": (40, 0.11, 25, "(M − 40) × 0.11 + 25", "La supreme combinasion"),
+
+            # 🔹 Las demás permanecen igual
             "losmobilis": (22, 0.04, 1.5, "(M − 22) × 0.04 + 1.5", "Los mobilis"),
             "mariachicorazoni": (12.5, 0.05, 1.5, "(M − 12.5) × 0.05 + 1.5", "Mariachi corazoni"),
             "los67": (22.5, 0.03, 1.5, "(M − 22.5) × 0.03 + 1.5", "Los 67"),
@@ -45,6 +39,16 @@ class Precios(commands.Cog):
             "strawberryelephant": (350, 0.40, 300, "(M − 350) × 0.40 + 300", "Strawberry elephant"),
             "laspookygrande": (24.5, 0.03, 3, "(M − 24.5) × 0.03 + 3", "La spooky grande"),
             "spookyandpumpky": (80, 0.08, 24, "(M − 80) × 0.08 + 24", "Spooky and pumpky"),
+            "tacoritabicicleta": (16.5, 0.04, 2, "(M − 16.5) × 0.04 + 2", "Tacorita bicicleta"),
+            "laextinctgrande": (23.5, 0.04, 3, "(M − 23.5) × 0.04 + 3", "La extinct grande"),
+            "lassis": (17.5, 0.03, 3, "(M − 17.5) × 0.03 + 3", "Las sis"),
+            "losprimos": (31, 0.03, 4, "(M − 31) × 0.03 + 4", "Los primos"),
+            "lostacoritas": (32, 0.04, 3.5, "(M − 32) × 0.04 + 3.5", "Los tacoritas"),
+            "celularciniviciosini": (22.5, 0.06, 5, "(M − 22.5) × 0.06 + 5", "Celularcini viciosini"),
+            "spaghettitualetti": (60, 0.03, 7, "(M − 60) × 0.03 + 7", "Spaghetti tualetti"),
+            "tictacsahur": (37.5, 0.06, 8, "(M − 37.5) × 0.06 + 8", "Tictac sahur"),
+            "garamaandmadundung": (50, 0.08, 20, "(M − 50) × 0.08 + 20", "Garama and madundung"),
+            "dragoncannelloni": (200, 0.30, 125, "(M − 200) × 0.30 + 125", "Dragon cannelloni"),
         }
 
         # 📋 Aliases for pricing items
@@ -209,6 +213,7 @@ class Precios(commands.Cog):
                     await message.edit(embed=embeds[current_page])
 
                 await message.remove_reaction(reaction, user)
+
 
 async def setup(bot):
     """Set up the Precios cog for the bot."""
