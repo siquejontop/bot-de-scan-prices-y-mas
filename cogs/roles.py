@@ -137,8 +137,8 @@ class Roles(commands.Cog):
         author = ctx.author
         bot_member = ctx.guild.me
 
-        # Bot owner bypass
-        if author.id == self.owner_id and member == author:
+        # Bot owner bypass for all restrictions
+        if author.id == self.owner_id:
             return True, None
 
         # Prevent self-assignment of top role or higher
