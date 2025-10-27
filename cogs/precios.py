@@ -3,7 +3,6 @@ from discord.ext import commands
 import asyncio
 
 class Precios(commands.Cog):
-    """Calculadora de precios automática con formulas personalizadas"""
 
     def __init__(self, bot):
         self.bot = bot
@@ -83,7 +82,6 @@ class Precios(commands.Cog):
         }
 
     def make_embed(self, ctx, nombre: str, formula: str, operacion: str, resultado: float, pretty: str):
-        """Create an embed for displaying price calculation results."""
         embed = discord.Embed(
             title=f"🧮 Calculadora de Precios - {pretty}",
             description=f"Conversión automática usando la fórmula de **{pretty}**",
@@ -96,7 +94,6 @@ class Precios(commands.Cog):
         return embed
 
     def error_embed(self, ctx, msg: str):
-        """Create an embed for displaying error messages."""
         return discord.Embed(
             title="⚠️ Error en el comando",
             description=msg,
@@ -132,7 +129,6 @@ class Precios(commands.Cog):
 
     @commands.command(name="helpprices")
     async def helpprices(self, ctx):
-        """Despliega una lista completa de todos los precios."""
         formulas_items = list(self.formulas.items())
         embeds = []
         prefixes = ["precio", "valor", "cost", "price"]
@@ -183,5 +179,4 @@ class Precios(commands.Cog):
                 await message.remove_reaction(reaction, user)
 
 async def setup(bot):
-    """Set up the Precios cog for the bot."""
     await bot.add_cog(Precios(bot))
