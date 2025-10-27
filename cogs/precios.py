@@ -2,18 +2,12 @@ import discord
 from discord.ext import commands
 import asyncio
 
-# ============================================================
-# 🧮 COG DE PRECIOS ACTUALIZADO COMPLETO
-# ============================================================
 class Precios(commands.Cog):
-    """Calculadora de precios automática con fórmulas personalizadas."""
+    """Calculadora de precios automática con formulas personalizadas"""
 
     def __init__(self, bot):
         self.bot = bot
 
-        # ============================================================
-        # 📊 FÓRMULAS DE PRECIOS (baseM, multiplicador, suma, formula, nombre)
-        # ============================================================
         self.formulas = {
             "esoksekolah": (30, 0.03, 1, "(M − 30) × 0.03 + 1", "Esok sekolah"),
             "loscombinasionas": (15, 0.03, 1.5, "(M − 15) × 0.03 + 1.5", "Los combinasionas"),
@@ -51,11 +45,7 @@ class Precios(commands.Cog):
             "headless": (175, 0.08, 30, "(M − 175) × 0.08 + 30", "Headless horseman"),
         }
 
-        # ============================================================
-        # 🔤 ALIAS (abreviaturas)
-        # ============================================================
         self.aliases = {
-            # Ejemplo: "alias": "clave_real"
             "es": "esoksekolah", "sek": "esoksekolah", "esok": "esoksekolah",
             "lc": "loscombinasionas", "comb": "loscombinasionas", "combina": "loscombinasionas",
             "lgc": "lagrandecombinasion", "grande": "lagrandecombinasion", "lgr": "lagrandecombinasion",
@@ -147,7 +137,6 @@ class Precios(commands.Cog):
         embeds = []
         prefixes = ["precio", "valor", "cost", "price"]
 
-        # Compactar: 10 productos por página
         pages = [formulas_items[i:i + 10] for i in range(0, len(formulas_items), 10)]
 
         for i, page in enumerate(pages, start=1):
