@@ -95,14 +95,13 @@ class Precios(commands.Cog):
 
     def error_embed(self, ctx, msg: str):
         return discord.Embed(
-            title="⚠️ Error en el comando",
+            title="Error en el comando",
             description=msg,
             color=discord.Color.red()
         ).set_footer(text=f"Pedido por {ctx.author}", icon_url=ctx.author.display_avatar.url)
 
     @commands.command(name="precio", aliases=["price", "cost", "valor"])
     async def precio(self, ctx, nombre: str = None, m: float = None):
-        """Calcula el precio de cada objeto en sab en millones a dolares."""
         if not nombre:
             return await ctx.send(embed=self.error_embed(
                 ctx, f"Debes especificar el nombre. Ejemplo: `{ctx.prefix}{ctx.command} lagrandecombinasion 100`"
