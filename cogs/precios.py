@@ -50,6 +50,8 @@ class Precios(commands.Cog):
             "chipsoandqueso": (25, 0.03, 5, "(M − 25) × 0.03 + 5", "Chipso and queso"),
             "spookyandpumpky": (80, 0.05, 20, "(M − 80) × 0.05 + 20", "Spooky and pumpky"),
             "meowl": (275, 0.30, 500, "(M − 275) × 0.30 + 500", "Meowl"),
+            "lacasa": (100, 0.07, 12, "(M − 100) × 0.07 + 12", "La casa boo"),
+            "headless": (175, 0.08, 30, "(M − 175) × 0.08 + 30", "Headless horseman"),
         }
 
         # ============================================================
@@ -92,8 +94,10 @@ class Precios(commands.Cog):
             "cq": "chipsoandqueso", "chipso": "chipsoandqueso", "queso": "chipsoandqueso",
             "pumpky": "spookyandpumpky", "spump": "spookyandpumpky", "spookypump": "spookyandpumpky",
             "meow": "meowl", "meo": "meowl", "miau": "meowl",
+            "boo": "lacasa", "casa": "lacasa",
+            "hh": "headless", "horseman": "headless",
         }
-        
+
     def make_embed(self, ctx, nombre: str, formula: str, operacion: str, resultado: float, pretty: str):
         """Create an embed for displaying price calculation results."""
         embed = discord.Embed(
@@ -150,7 +154,7 @@ class Precios(commands.Cog):
         prefixes = ["precio", "valor", "cost", "price"]
 
         # Compactar: 10 productos por página
-        pages = [formulas_items[i:i+10] for i in range(0, len(formulas_items), 10)]
+        pages = [formulas_items[i:i + 10] for i in range(0, len(formulas_items), 10)]
 
         for i, page in enumerate(pages, start=1):
             embed = discord.Embed(
@@ -186,7 +190,7 @@ class Precios(commands.Cog):
                 except asyncio.TimeoutError:
                     break
 
-                if str(reaction.emoji) == "➡️" and current_page < len(embeds)-1:
+                if str(reaction.emoji) == "➡️" and current_page < len(embeds) - 1:
                     current_page += 1
                     await message.edit(embed=embeds[current_page])
                 elif str(reaction.emoji) == "⬅️" and current_page > 0:
@@ -194,7 +198,6 @@ class Precios(commands.Cog):
                     await message.edit(embed=embeds[current_page])
 
                 await message.remove_reaction(reaction, user)
-
 
 async def setup(bot):
     """Set up the Precios cog for the bot."""
