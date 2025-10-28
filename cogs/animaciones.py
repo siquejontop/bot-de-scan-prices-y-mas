@@ -23,14 +23,7 @@ acciones = {
         "desc": "💋 **{a}** besó a **{b}** 💞",
         "color": discord.Color.pink(),
         "gifs": [
-            "https://media.tenor.com/0Z0pF4b5bxUAAAAC/kiss-anime.gif",
-            "https://media.tenor.com/lwBILh_E1CMAAAAC/anime-kiss.gif",
-            "https://media.tenor.com/3ZxfrtDZX8YAAAAC/anime-kiss-scene.gif",
-            "https://media.tenor.com/IH8Z-NHtQvAAAAAC/anime-romance-kiss.gif",
-            "https://media.tenor.com/pXoyhGEMa3AAAAAC/ano-kiss.gif",
-            "https://media.tenor.com/9E2i8PMmF5wAAAAC/anime-couple-kiss.gif",
-            "https://media.tenor.com/vVfsq1Gl8o4AAAAC/anime-cute.gif",
-            "https://media.tenor.com/6czlwEJmXRUAAAAC/sweet-kiss.gif",
+            "https://media1.tenor.com/m/kmxEaVuW8AoAAAAC/kiss-gentle-kiss.gif",
         ]
     },
     "hug": {
