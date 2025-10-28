@@ -13,5 +13,7 @@ aiohttp
 opencv-python
 numpy
 requests==2.32.5
-pymongo==4.10.1
+
+# --- Dependencias MongoDB (compatibles entre sí) ---
+pymongo==4.9.1
 motor==3.6.0
