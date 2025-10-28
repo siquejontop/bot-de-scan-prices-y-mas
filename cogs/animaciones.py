@@ -24,9 +24,7 @@ acciones = {
         "color": discord.Color.pink(),
         "gifs": [
             "https://media1.tenor.com/m/kmxEaVuW8AoAAAAC/kiss-gentle-kiss.gif",
-            "https://media.tenor.com/lwBILh_E1CMAAAAC/anime-kiss.gif",
-            "https://media.tenor.com/3ZxfrtDZX8YAAAAC/anime-kiss-scene.gif",
-            "https://media.tenor.com/IH8Z-NHtQvAAAAAC/anime-romance-kiss.gif",
+
         ]
     },
     "hug": {
