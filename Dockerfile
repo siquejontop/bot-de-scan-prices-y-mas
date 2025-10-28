@@ -3,6 +3,7 @@ FROM python:3.11-slim
 
 # Install system dependencies for Tesseract, OpenCV, and other requirements
 RUN apt-get update && apt-get install -y \
+    ca-certificates \
     tesseract-ocr \
     tesseract-ocr-eng \
     libtesseract-dev \
@@ -13,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     libxrender1 \
     libfontconfig1 \
+    && update-ca-certificates \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
