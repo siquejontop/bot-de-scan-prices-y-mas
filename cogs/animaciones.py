@@ -3,11 +3,11 @@ from discord.ext import commands
 from discord import app_commands
 import random
 import motor.motor_asyncio
+import aiohttp
 import os
 
-# === CONFIGURACIÓN GLOBAL MONGO ===
+# === Configuración MongoDB ===
 mongo_uri = os.getenv("MONGO_URI")
-
 if mongo_uri:
     client = motor.motor_asyncio.AsyncIOMotorClient(mongo_uri)
     db = client["nekotina_clone"]
@@ -17,7 +17,7 @@ else:
     print("⚠️ MongoDB no configurado, las estadísticas no se guardarán.")
 
 
-# === DICCIONARIO DE ACCIONES ===
+# === Diccionario de acciones ===
 acciones = {
     "kiss": {
         "desc": "💋 **{a}** besó a **{b}** 💞",
@@ -34,7 +34,7 @@ acciones = {
         ]
     },
     "hug": {
-        "desc": "🤗 **{a}** abrazó a **{b}** con cariño 💞",
+        "desc": "🤗 **{a}** abrazó a **{b}** 💞",
         "color": discord.Color.blurple(),
         "gifs": [
             "https://media.tenor.com/2roX3uxz_68AAAAC/anime-hug.gif",
@@ -45,7 +45,7 @@ acciones = {
         ]
     },
     "pat": {
-        "desc": "✨ **{a}** acarició a **{b}** suavemente 🥺",
+        "desc": "✨ **{a}** acarició a **{b}** 🥺",
         "color": discord.Color.gold(),
         "gifs": [
             "https://media.tenor.com/AW5zk8FfGnoAAAAC/headpat.gif",
@@ -77,7 +77,7 @@ acciones = {
 }
 
 
-# === BOTONES DE INTERACCIÓN ===
+# === Botones ===
 class ReactionView(discord.ui.View):
     def __init__(self, author, target, tipo):
         super().__init__(timeout=None)
@@ -88,9 +88,7 @@ class ReactionView(discord.ui.View):
     @discord.ui.button(label="💞 Corresponder", style=discord.ButtonStyle.green)
     async def corresponder(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user != self.target:
-            return await interaction.response.send_message(
-                "Solo la persona mencionada puede responder 💋", ephemeral=True
-            )
+            return await interaction.response.send_message("Solo la persona mencionada puede responder 💋", ephemeral=True)
         data = acciones[self.tipo]
         gif = random.choice(data["gifs"])
         embed = discord.Embed(
@@ -103,18 +101,31 @@ class ReactionView(discord.ui.View):
     @discord.ui.button(label="🚫 Rechazar", style=discord.ButtonStyle.red)
     async def rechazar(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user != self.target:
-            return await interaction.response.send_message(
-                "Solo la persona mencionada puede responder.", ephemeral=True
-            )
-        await interaction.response.send_message(
-            f"💔 **{self.target.name}** rechazó a **{self.author.name}**...", ephemeral=False
-        )
+            return await interaction.response.send_message("Solo la persona mencionada puede responder.", ephemeral=True)
+        await interaction.response.send_message(f"💔 **{self.target.name}** rechazó a **{self.author.name}**...", ephemeral=False)
 
 
-# === COG PRINCIPAL ===
+# === Cog principal ===
 class Interacciones(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+
+    async def mostrar_gif(self, channel, embed, gif_url, view):
+        """
+        Envía el embed, y si Discord no carga el GIF, lo reenvía como archivo.
+        """
+        try:
+            msg = await channel.send(embed=embed, view=view)
+            return msg
+        except discord.HTTPException:
+            # Si falla el embed, baja el GIF y lo manda como archivo
+            async with aiohttp.ClientSession() as session:
+                async with session.get(gif_url) as resp:
+                    if resp.status == 200:
+                        data = await resp.read()
+                        file = discord.File(fp=bytearray(data), filename="gif.gif")
+                        embed.set_image(url="attachment://gif.gif")
+                        await channel.send(embed=embed, view=view, file=file)
 
     async def ejecutar_interaccion(self, ctx_or_inter, tipo, usuario):
         autor = ctx_or_inter.author if hasattr(ctx_or_inter, "author") else ctx_or_inter.user
@@ -129,29 +140,29 @@ class Interacciones(commands.Cog):
         data = acciones[tipo]
         gif = random.choice(data["gifs"])
         desc = data["desc"].format(a=autor.name, b=usuario.name)
-        color = data["color"]
 
-        # Guardar interacción en Mongo
-        if interacciones_db is not None:
+        # Guardar interacción
+        if interacciones_db:
             await interacciones_db.update_one(
                 {"user1": str(autor.id), "user2": str(usuario.id), "action": tipo},
                 {"$inc": {"count": 1}},
                 upsert=True
             )
 
-        embed = discord.Embed(description=desc, color=color)
+        embed = discord.Embed(description=desc, color=data["color"])
         embed.set_image(url=gif)
-        embed.set_footer(text=f"❤️ {tipo.title()} • {autor.name}", icon_url=autor.avatar.url if autor.avatar else None)
+        embed.set_footer(text=f"{tipo.title()} • {autor.name}", icon_url=autor.avatar.url if autor.avatar else None)
 
         view = ReactionView(autor, usuario, tipo)
 
-        # Soporta tanto prefijo como slash
+        # Slash o prefijo
         if isinstance(ctx_or_inter, commands.Context):
-            await ctx_or_inter.send(embed=embed, view=view)
+            await self.mostrar_gif(ctx_or_inter.channel, embed, gif, view)
         else:
-            await ctx_or_inter.response.send_message(embed=embed, view=view)
+            await ctx_or_inter.response.defer()  # evita errores de interacción
+            await self.mostrar_gif(ctx_or_inter.channel, embed, gif, view)
 
-    # ===== COMANDOS CON PREFIJO =====
+    # --- comandos prefijo ---
     @commands.command()
     async def kiss(self, ctx, usuario: discord.Member):
         await self.ejecutar_interaccion(ctx, "kiss", usuario)
@@ -172,7 +183,7 @@ class Interacciones(commands.Cog):
     async def bite(self, ctx, usuario: discord.Member):
         await self.ejecutar_interaccion(ctx, "bite", usuario)
 
-    # ===== SLASH COMMANDS =====
+    # --- slash ---
     @app_commands.command(name="kiss", description="Dale un beso a alguien 💋")
     async def slash_kiss(self, interaction: discord.Interaction, usuario: discord.Member):
         await self.ejecutar_interaccion(interaction, "kiss", usuario)
@@ -181,7 +192,7 @@ class Interacciones(commands.Cog):
     async def slash_hug(self, interaction: discord.Interaction, usuario: discord.Member):
         await self.ejecutar_interaccion(interaction, "hug", usuario)
 
-    @app_commands.command(name="pat", description="Dale palmaditas a alguien ✨")
+    @app_commands.command(name="pat", description="Dale palmaditas ✨")
     async def slash_pat(self, interaction: discord.Interaction, usuario: discord.Member):
         await self.ejecutar_interaccion(interaction, "pat", usuario)
 
@@ -194,7 +205,6 @@ class Interacciones(commands.Cog):
         await self.ejecutar_interaccion(interaction, "bite", usuario)
 
 
-# === CARGA DEL COG ===
 async def setup(bot):
     await bot.add_cog(Interacciones(bot))
     print("💞 Cog de interacciones cargado correctamente.")
