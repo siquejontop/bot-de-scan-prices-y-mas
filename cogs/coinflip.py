@@ -1,129 +1,174 @@
 import discord
 from discord.ext import commands
-import logging
 import random
+import logging
 
 logger = logging.getLogger(__name__)
 
+# ===============================
+# 🎮 CLASE DE VISTA (BOTONES)
+# ===============================
+class TicTacToeView(discord.ui.View):
+    def __init__(self, ctx, player1, player2):
+        super().__init__(timeout=180)  # 3 min de inactividad
+        self.ctx = ctx
+        self.player1 = player1
+        self.player2 = player2
+        self.turn = player1
+        self.symbols = {player1: "🔴", player2: "🔵"}
+        self.board = [" " for _ in range(9)]
+        self.game_over = False
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user not in [self.player1, self.player2]:
+            await interaction.response.send_message("⚠️ No estás participando en esta partida.", ephemeral=True)
+            return False
+        if self.game_over:
+            await interaction.response.send_message("🛑 El juego ya ha terminado.", ephemeral=True)
+            return False
+        if interaction.user != self.turn:
+            await interaction.response.send_message(f"⏳ Es el turno de {self.turn.display_name}.", ephemeral=True)
+            return False
+        return True
+
+    def check_winner(self):
+        combos = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ]
+        for combo in combos:
+            if self.board[combo[0]] == self.board[combo[1]] == self.board[combo[2]] != " ":
+                return True
+        return False
+
+    async def update_message(self, interaction):
+        desc = (
+            f"[ {self.player1.mention} vs {self.player2.mention} ]\n\n"
+            f"Turno de {self.turn.mention} ({self.symbols[self.turn]})"
+        )
+
+        embed = discord.Embed(
+            title="🎮 Tic Tac Toe",
+            description=desc,
+            color=discord.Color.pink()
+        )
+        await interaction.message.edit(embed=embed, view=self)
+
+    @discord.ui.button(label=" ", style=discord.ButtonStyle.secondary, row=0)
+    async def b1(self, interaction, button): await self.play(interaction, 0, button)
+
+    @discord.ui.button(label=" ", style=discord.ButtonStyle.secondary, row=0)
+    async def b2(self, interaction, button): await self.play(interaction, 1, button)
+
+    @discord.ui.button(label=" ", style=discord.ButtonStyle.secondary, row=0)
+    async def b3(self, interaction, button): await self.play(interaction, 2, button)
+
+    @discord.ui.button(label=" ", style=discord.ButtonStyle.secondary, row=1)
+    async def b4(self, interaction, button): await self.play(interaction, 3, button)
+
+    @discord.ui.button(label=" ", style=discord.ButtonStyle.secondary, row=1)
+    async def b5(self, interaction, button): await self.play(interaction, 4, button)
+
+    @discord.ui.button(label=" ", style=discord.ButtonStyle.secondary, row=1)
+    async def b6(self, interaction, button): await self.play(interaction, 5, button)
+
+    @discord.ui.button(label=" ", style=discord.ButtonStyle.secondary, row=2)
+    async def b7(self, interaction, button): await self.play(interaction, 6, button)
+
+    @discord.ui.button(label=" ", style=discord.ButtonStyle.secondary, row=2)
+    async def b8(self, interaction, button): await self.play(interaction, 7, button)
+
+    @discord.ui.button(label=" ", style=discord.ButtonStyle.secondary, row=2)
+    async def b9(self, interaction, button): await self.play(interaction, 8, button)
+
+    async def play(self, interaction, index, button):
+        # Movimiento
+        if self.board[index] != " ":
+            await interaction.response.send_message("🚫 Esa casilla ya está ocupada.", ephemeral=True)
+            return
+
+        symbol = self.symbols[self.turn]
+        button.label = symbol
+        button.disabled = True
+        button.style = (
+            discord.ButtonStyle.danger if symbol == "🔴" else discord.ButtonStyle.primary
+        )
+        self.board[index] = symbol
+
+        # Verificar ganador
+        if self.check_winner():
+            self.game_over = True
+            for b in self.children:
+                b.disabled = True
+            embed = discord.Embed(
+                title="🏆 ¡Victoria!",
+                description=f"{self.turn.mention} ha ganado la partida! 🎉",
+                color=discord.Color.green()
+            )
+            await interaction.response.edit_message(embed=embed, view=self)
+            return
+
+        # Verificar empate
+        if " " not in self.board:
+            self.game_over = True
+            for b in self.children:
+                b.disabled = True
+            embed = discord.Embed(
+                title="🤝 ¡Empate!",
+                description="No quedaron más movimientos disponibles.",
+                color=discord.Color.orange()
+            )
+            await interaction.response.edit_message(embed=embed, view=self)
+            return
+
+        # Cambiar turno
+        self.turn = self.player2 if self.turn == self.player1 else self.player1
+        await interaction.response.defer()
+        await self.update_message(interaction)
+
+# ===============================
+# ⚙️ COG PRINCIPAL
+# ===============================
 class Games(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.games = {}  # {channel_id: {'board': list, 'player1': user, 'player2': user, 'turn': user, 'symbol': str}}
-        logger.info("Games cog initialized")
 
+    # 🧩 Comando Tic Tac Toe
     @commands.command(name="tictactoe", aliases=["ttt"])
-    async def start_game(self, ctx, opponent: discord.Member):
-        if ctx.author == opponent:
-            await ctx.send("No puedes jugar contra ti mismo! 😅")
+    async def tictactoe(self, ctx, opponent: discord.Member):
+        if opponent == ctx.author:
+            await ctx.send("❌ No puedes jugar contra ti mismo.")
             return
-        if ctx.channel.id in self.games:
-            await ctx.send("Ya hay un juego en curso en este canal. Usa `,quit` para cancelarlo. 🚫")
-            return
-
-        self.games[ctx.channel.id] = {
-            'board': [' ' for _ in range(9)],
-            'player1': ctx.author,
-            'player2': opponent,
-            'turn': ctx.author,
-            'symbol': 'X'
-        }
-        await self.display_board(ctx)
-        await ctx.send(f"{ctx.author.mention} (🔴) vs {opponent.mention} (🔵). ¡Comienza {ctx.author.mention}! Usa `,move <1-9>` para jugar. 🎮")
-
-    @commands.command(name="move")
-    async def make_move(self, ctx, position: int):
-        if ctx.channel.id not in self.games:
-            await ctx.send("No hay un juego en curso. Usa `,tictactoe @opponent` para empezar. 🎲")
-            return
-        game = self.games[ctx.channel.id]
-
-        if ctx.author != game['turn']:
-            await ctx.send(f"Es el turno de {game['turn'].mention}. ⏳")
+        if opponent.bot:
+            await ctx.send("🤖 No puedes jugar contra bots.")
             return
 
-        if position < 1 or position > 9 or game['board'][position - 1] != ' ':
-            await ctx.send("Movimiento inválido. Elige un número del 1 al 9 en una posición vacía. ❌")
-            return
-
-        game['board'][position - 1] = game['symbol']
-        winner = self.check_winner(game['board'], game)
-        if winner:
-            await self.display_board(ctx)
-            await ctx.send(f"¡{winner.mention} ha ganado! 🏆🎉")
-            del self.games[ctx.channel.id]
-            return
-
-        if ' ' not in game['board']:
-            await self.display_board(ctx)
-            await ctx.send("¡Empate! 🙌")
-            del self.games[ctx.channel.id]
-            return
-
-        game['turn'] = game['player2'] if game['turn'] == game['player1'] else game['player1']
-        game['symbol'] = 'O' if game['symbol'] == 'X' else 'X'
-        await self.display_board(ctx)
-        await ctx.send(f"Turno de {game['turn'].mention} ({'🔴' if game['symbol'] == 'X' else '🔵'}). ⏩")
-
-    @commands.command(name="quit")
-    async def quit_game(self, ctx):
-        if ctx.channel.id in self.games:
-            del self.games[ctx.channel.id]
-            await ctx.send("Juego cancelado. 😔")
-        else:
-            await ctx.send("No hay un juego en curso en este canal. 🎲")
-
-    def check_winner(self, board, game):
-        # Verificar filas
-        for i in range(0, 9, 3):
-            if board[i] == board[i + 1] == board[i + 2] != ' ':
-                return game['player1'] if board[i] == 'X' else game['player2']
-        # Verificar columnas
-        for i in range(3):
-            if board[i] == board[i + 3] == board[i + 6] != ' ':
-                return game['player1'] if board[i] == 'X' else game['player2']
-        # Verificar diagonales
-        if board[0] == board[4] == board[8] != ' ':
-            return game['player1'] if board[0] == 'X' else game['player2']
-        if board[2] == board[4] == board[6] != ' ':
-            return game['player1'] if board[2] == 'X' else game['player2']
-        return None
-
-    async def display_board(self, ctx):
-        game = self.games[ctx.channel.id]
-        board = game['board']
+        view = TicTacToeView(ctx, ctx.author, opponent)
         embed = discord.Embed(
-            title="🎲 Tic Tac Toe 🎲",
-            description="Juega con tus amigos en este clásico juego!",
-            color=discord.Color.blue()
+            title="🎮 Tic Tac Toe",
+            description=f"[ {ctx.author.mention} vs {opponent.mention} ]\n\nTurno de {ctx.author.mention} (🔴)",
+            color=discord.Color.pink()
         )
-        embed.add_field(
-            name="Tablero",
-            value=f"```🔲 | 🔲 | 🔲\n---------\n🔲 | 🔲 | 🔲\n---------\n🔲 | 🔲 | 🔲```" if all(x == ' ' for x in board) else \
-                  f"```{board[0]} | {board[1]} | {board[2]}\n---------\n{board[3]} | {board[4]} | {board[5]}\n---------\n{board[6]} | {board[7]} | {board[8]}```",
-            inline=False
-        )
-        embed.set_footer(text=f"Turno de {game['turn'].mention} ({'🔴' if game['symbol'] == 'X' else '🔵'}) | Usa `,move <1-9>`",
-                         icon_url=ctx.author.avatar.url if ctx.author.avatar else discord.utils.MISSING)
-        embed.set_author(name=f"{game['player1'].name} (🔴) vs {game['player2'].name} (🔵)",
-                         icon_url=game['player1'].avatar.url if game['player1'].avatar else discord.utils.MISSING)
-        await ctx.send(embed=embed)
+        await ctx.send(embed=embed, view=view)
 
+    # 💰 Comando Coinflip estilo Carl-bot
     @commands.command(aliases=["flip", "coin"])
     async def coinflip(self, ctx):
-        resultados = ["cara", "cruz"]
-        resultado = random.choice(resultados)
+        resultado = random.choice(["Cara", "Cruz"])
+        color = discord.Color.gold() if resultado == "Cara" else discord.Color.dark_gray()
+
         embed = discord.Embed(
-            title="🎰 Lanzando la moneda... 🎰",
-            description=f"**Resultado:** {resultado.capitalize()}! 💰\n({resultado})",
-            color=discord.Color.gold()
+            title="🪙 Lanzamiento de Moneda",
+            description=f"{ctx.author.mention} lanzó una moneda y salió **{resultado}**!",
+            color=color
         )
-        embed.set_thumbnail(url="https://i.imgur.com/7kQPRf8.png")  # URL de una imagen de moneda (puedes cambiarla)
+        embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/992/992703.png")
         embed.set_footer(
-            text=f"Solicitado por {ctx.author.name} | ¡Suerte la próxima vez! 🍀",
+            text="Inspirado en Carl-bot | Usa ,coinflip para volver a jugar",
             icon_url=ctx.author.avatar.url if ctx.author.avatar else discord.utils.MISSING
         )
         await ctx.send(embed=embed)
-        logger.info(f"Coinflip command executed by {ctx.author} in {ctx.guild}")
 
 async def setup(bot):
     await bot.add_cog(Games(bot))
