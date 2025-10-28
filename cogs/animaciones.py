@@ -24,6 +24,9 @@ acciones = {
         "color": discord.Color.pink(),
         "gifs": [
             "https://media1.tenor.com/m/kmxEaVuW8AoAAAAC/kiss-gentle-kiss.gif",
+            "https://media.tenor.com/lwBILh_E1CMAAAAC/anime-kiss.gif",
+            "https://media.tenor.com/3ZxfrtDZX8YAAAAC/anime-kiss-scene.gif",
+            "https://media.tenor.com/IH8Z-NHtQvAAAAAC/anime-romance-kiss.gif",
         ]
     },
     "hug": {
@@ -32,9 +35,7 @@ acciones = {
         "gifs": [
             "https://media.tenor.com/2roX3uxz_68AAAAC/anime-hug.gif",
             "https://media.tenor.com/Wx9IEmZZXSoAAAAC/hug-anime.gif",
-            "https://media.tenor.com/eTjX0EYcV1kAAAAC/hug-anime.gif",
             "https://media.tenor.com/Sdw6kN9nHysAAAAC/hug-cute.gif",
-            "https://media.tenor.com/0K1Qv6lCQzYAAAAC/anime-hug-love.gif",
         ]
     },
     "pat": {
@@ -43,8 +44,6 @@ acciones = {
         "gifs": [
             "https://media.tenor.com/AW5zk8FfGnoAAAAC/headpat.gif",
             "https://media.tenor.com/MYjCChfTbkoAAAAC/anime-headpat.gif",
-            "https://media.tenor.com/XgEMy7QDb0AAAAAC/anime-pat.gif",
-            "https://media.tenor.com/Rm5yL4kD45sAAAAC/pat-anime.gif",
         ]
     },
     "slap": {
@@ -53,8 +52,6 @@ acciones = {
         "gifs": [
             "https://media.tenor.com/vYFJYVgY8qsAAAAC/slap-anime.gif",
             "https://media.tenor.com/GfSX-u7VGM4AAAAC/slap.gif",
-            "https://media.tenor.com/XiYuUqzJdLwAAAAC/anime-girl-slap.gif",
-            "https://media.tenor.com/F4vA1z_9OKoAAAAC/anime-hit.gif",
         ]
     },
     "bite": {
@@ -63,8 +60,6 @@ acciones = {
         "gifs": [
             "https://media.tenor.com/L8j36e0cU6IAAAAC/anime-bite.gif",
             "https://media.tenor.com/ZtNU3M6V4aUAAAAC/anime-vampire-bite.gif",
-            "https://media.tenor.com/nP2xyvYJ4zMAAAAC/anime-bite.gif",
-            "https://media.tenor.com/TlT2QIR0vL4AAAAC/anime-bite-cute.gif",
         ]
     }
 }
@@ -82,6 +77,7 @@ class ReactionView(discord.ui.View):
     async def corresponder(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user != self.target:
             return await interaction.response.send_message("Solo la persona mencionada puede responder 💋", ephemeral=True)
+
         data = acciones[self.tipo]
         gif = random.choice(data["gifs"])
         embed = discord.Embed(
@@ -103,25 +99,29 @@ class Interacciones(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    async def mostrar_gif(self, channel, embed, gif_url, view):
+    async def mostrar_gif(self, destino, embed, gif_url, view):
         """
-        Envía el embed, y si Discord no carga el GIF, lo reenvía como archivo.
+        Envía el embed; si Discord falla en mostrar el GIF, lo envía como archivo adjunto.
         """
         try:
-            msg = await channel.send(embed=embed, view=view)
-            return msg
+            await destino.send(embed=embed, view=view)
         except discord.HTTPException:
-            # Si falla el embed, baja el GIF y lo manda como archivo
             async with aiohttp.ClientSession() as session:
                 async with session.get(gif_url) as resp:
                     if resp.status == 200:
                         data = await resp.read()
                         file = discord.File(fp=bytearray(data), filename="gif.gif")
                         embed.set_image(url="attachment://gif.gif")
-                        await channel.send(embed=embed, view=view, file=file)
+                        await destino.send(embed=embed, view=view, file=file)
 
     async def ejecutar_interaccion(self, ctx_or_inter, tipo, usuario):
-        autor = ctx_or_inter.author if hasattr(ctx_or_inter, "author") else ctx_or_inter.user
+        # Distingue entre comando prefijo o slash
+        if isinstance(ctx_or_inter, commands.Context):
+            autor = ctx_or_inter.author
+            destino = ctx_or_inter.channel
+        else:
+            autor = ctx_or_inter.user
+            destino = ctx_or_inter.channel or await ctx_or_inter.user.create_dm()
 
         if usuario.id == autor.id:
             msg = "😳 No puedes hacerlo contigo mismo..."
@@ -134,8 +134,8 @@ class Interacciones(commands.Cog):
         gif = random.choice(data["gifs"])
         desc = data["desc"].format(a=autor.name, b=usuario.name)
 
-        # Guardar interacción
-        if interacciones_db:
+        # Guardar interacción en MongoDB
+        if interacciones_db is not None:
             await interacciones_db.update_one(
                 {"user1": str(autor.id), "user2": str(usuario.id), "action": tipo},
                 {"$inc": {"count": 1}},
@@ -144,18 +144,18 @@ class Interacciones(commands.Cog):
 
         embed = discord.Embed(description=desc, color=data["color"])
         embed.set_image(url=gif)
-        embed.set_footer(text=f"{tipo.title()} • {autor.name}", icon_url=autor.avatar.url if autor.avatar else None)
+        embed.set_footer(text=f"{tipo.title()} • {autor.name}", icon_url=getattr(autor.avatar, 'url', None))
 
         view = ReactionView(autor, usuario, tipo)
 
-        # Slash o prefijo
+        # Enviar mensaje
         if isinstance(ctx_or_inter, commands.Context):
-            await self.mostrar_gif(ctx_or_inter.channel, embed, gif, view)
+            await self.mostrar_gif(destino, embed, gif, view)
         else:
-            await ctx_or_inter.response.defer()  # evita errores de interacción
-            await self.mostrar_gif(ctx_or_inter.channel, embed, gif, view)
+            await ctx_or_inter.response.defer()
+            await self.mostrar_gif(destino, embed, gif, view)
 
-    # --- comandos prefijo ---
+    # --- Comandos prefijo ---
     @commands.command()
     async def kiss(self, ctx, usuario: discord.Member):
         await self.ejecutar_interaccion(ctx, "kiss", usuario)
@@ -176,7 +176,7 @@ class Interacciones(commands.Cog):
     async def bite(self, ctx, usuario: discord.Member):
         await self.ejecutar_interaccion(ctx, "bite", usuario)
 
-    # --- slash ---
+    # --- Slash Commands ---
     @app_commands.command(name="kiss", description="Dale un beso a alguien 💋")
     async def slash_kiss(self, interaction: discord.Interaction, usuario: discord.Member):
         await self.ejecutar_interaccion(interaction, "kiss", usuario)
