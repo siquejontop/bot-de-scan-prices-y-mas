@@ -8,13 +8,13 @@ class Precios(commands.Cog):
         self.bot = bot
 
         self.formulas = {
-            "esoksekolah": (30, 0.03, 1, "(M − 30) × 0.03 + 1", "Esok sekolah"),
-            "loscombinasionas": (15, 0.03, 1.5, "(M − 15) × 0.03 + 1.5", "Los combinasionas"),
-            "lagrandecombinasion": (10, 0.03, 1.5, "(M − 10) × 0.03 + 1.5", "La grande combinasion"),
-            "loshotspositos": (20, 0.04, 2.5, "(M − 20) × 0.04 + 2.5", "Los hotspositos"),
+            "esoksekolah": (30, 0.01, 1, "(M − 30) × 0.01 + 1", "Esok sekolah"),
+            "loscombinasionas": (15, 0.02, 1.5, "(M − 15) × 0.02 + 1.5", "Los combinasionas"),
+            "lagrandecombinasion": (10, 0.02, 1.5, "(M − 10) × 0.02 + 1.5", "La grande combinasion"),
+            "loshotspositos": (20, 0.03, 2.5, "(M − 20) × 0.03 + 2.5", "Los hotspositos"),
             "losbros": (24, 0.02, 3, "(M − 24) × 0.02 + 3", "Los bros"),
-            "ketupatkepat": (35, 0.04, 8, "(M − 35) × 0.04 + 8", "Ketupat kepat"),
-            "nuclearodinossauro": (15, 0.05, 8, "(M − 15) × 0.05 + 8", "Nuclearo dinossauro"),
+            "ketupatkepat": (35, 0.03, 8, "(M − 35) × 0.03 + 8", "Ketupat kepat"),
+            "nuclearodinossauro": (15, 0.05, 7, "(M − 15) × 0.05 + 7", "Nuclearo dinossauro"),
             "tralaledon": (27.5, 0.03, 10, "(M − 27.5) × 0.03 + 10", "Tralaledon"),
             "ketchuruandmusturu": (42.5, 0.06, 12, "(M − 42.5) × 0.06 + 12", "Ketchuru and musturu"),
             "lasupremecombinasion": (40, 0.11, 25, "(M − 40) × 0.11 + 25", "La supreme combinasion"),
