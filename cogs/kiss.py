@@ -19,6 +19,8 @@ else:
 
 KISS_GIFS = [
     {"url": "https://raw.githubusercontent.com/siquejontop/bot-de-scan-prices-y-mas/main/assets/kiss.gif", "source": "Anime: Kiss x Sis"},
+    {"url": "https://raw.githubusercontent.com/siquejontop/bot-de-scan-prices-y-mas/main/assets/kiss1.gif", "source": "Anime: Eden of the East"}, 
+    {"url": "https://raw.githubusercontent.com/siquejontop/bot-de-scan-prices-y-mas/main/assets/kiss2.gif", "source": "Anime: Toradora!"}, 
 ]
 
 class KissView(discord.ui.View):
