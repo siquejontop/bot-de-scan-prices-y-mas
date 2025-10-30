@@ -9,7 +9,7 @@ class Precios(commands.Cog):
 
         self.formulas = {
             "esoksekolah": (30, 0.01, 1, "(M − 30) × 0.01 + 1", "Esok sekolah"),
-            "loscombinasionas": (15, 0.02, 1.5, "(M − 15) × 0.02 + 1.5", "Los combinasionas"),
+            "loscombinasionas": (15, 0.01, 1.5, "(M − 15) × 0.01 + 1.5", "Los combinasionas"),
             "lagrandecombinasion": (10, 0.02, 1.5, "(M − 10) × 0.02 + 1.5", "La grande combinasion"),
             "loshotspositos": (20, 0.03, 2.5, "(M − 20) × 0.03 + 2.5", "Los hotspositos"),
             "losbros": (24, 0.02, 3, "(M − 24) × 0.02 + 3", "Los bros"),
