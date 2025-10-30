@@ -2,18 +2,19 @@ import discord
 from discord.ext import commands
 from datetime import datetime, timezone
 import random
+import asyncio
 
 class Utils(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     # =====================================================
-    # USER INFO – ESTILO DISCORD OFICIAL
+    # USER INFO – ESTILO DISCORD OFICIAL (CORREGIDO)
     # =====================================================
     @commands.command(aliases=["userinfo", "ui", "user", "w"])
     async def usuario(self, ctx, member: discord.Member = None):
         member = member or ctx.author
-        user = member._user
+        user = member._user  # Solo para datos globales (banner, about, flags)
 
         # === BADGES ===
         badges = []
@@ -33,8 +34,11 @@ class Utils(commands.Cog):
         for flag, emoji in badge_map.items():
             if getattr(flags, flag, False):
                 badges.append(emoji)
+        
+        # CORREGIDO: Usa member.premium_since
         if member.premium_since:
             badges.append("<:nitro:1139666214857199616>")
+        
         badges_text = " ".join(badges) if badges else "Sin insignias"
 
         # === ESTADO ===
@@ -93,7 +97,6 @@ class Utils(commands.Cog):
             embed.set_image(url=banner_url)
         embed.set_thumbnail(url=avatar_url)
 
-        # === CAMPOS ===
         embed.add_field(
             name="",
             value=(
@@ -116,14 +119,13 @@ class Utils(commands.Cog):
         )
 
         embed.add_field(name="\u200b", value="\u200b", inline=True)
-
         embed.add_field(name="Roles", value=roles_text, inline=True)
 
         # === BOTONES ===
         view = discord.ui.View()
-        view.add_item(discord.ui.Button(label="Avatar del usuario", url=avatar_url, emoji="<:avatar_icon:1139666254001672192>"))
+        view.add_item(discord.ui.Button(label="Avatar", url=avatar_url, emoji="<:avatar_icon:1139666254001672192>"))
         if banner_url:
-            view.add_item(discord.ui.Button(label="Banner del usuario", url=banner_url, emoji="<:banner_icon:1139666256002363392>"))
+            view.add_item(discord.ui.Button(label="Banner", url=banner_url, emoji="<:banner_icon:1139666256002363392>"))
 
         await ctx.send(embed=embed, view=view)
 
@@ -196,21 +198,38 @@ class Utils(commands.Cog):
             return await ctx.send("Usa: `,finduser <nombre>`")
         resultados = [m for m in ctx.guild.members if nombre.lower() in m.display_name.lower()]
         if not resultados:
-            return await ctx.send("No se encontraron usuarios con ese nombre.")
+            return await ctx.send("No se encontraron usuarios.")
         embed = discord.Embed(title=f"Resultados para: {nombre}", color=discord.Color.gold())
         embed.description = "\n".join([f"{m.mention} (`{m.display_name}`)" for m in resultados[:15]])
         await ctx.send(embed=embed)
 
     # =====================================================
-    # PING
+    # PING MEJORADO: Latencia + Velocidad de Internet
     # =====================================================
     @commands.command()
     async def ping(self, ctx):
-        latencia = round(self.bot.latency * 1000)
-        embed = discord.Embed(title="¡Pong!", color=discord.Color.green())
-        embed.add_field(name="Latencia", value=f"{latencia}ms", inline=True)
-        embed.add_field(name="API", value=f"{latencia}ms", inline=True)
-        await ctx.send(embed=embed)
+        embed = discord.Embed(title="Calculando velocidad...", color=discord.Color.orange())
+        msg = await ctx.send(embed=embed)
+
+        # Latencia del WebSocket
+        ws_latency = round(self.bot.latency * 1000)
+
+        # Latencia real (mensaje enviado → editado)
+        before = datetime.utcnow()
+        await msg.edit(content=None, embed=embed)
+        after = datetime.utcnow()
+        msg_latency = round((after - before).total_seconds() * 1000)
+
+        # Estado de conexión
+        status = "Excelente" if msg_latency < 150 else "Bueno" if msg_latency < 300 else "Lento"
+
+        embed = discord.Embed(title="Velocidad de Internet", color=discord.Color.green() if status == "Excelente" else discord.Color.yellow() if status == "Bueno" else discord.Color.red())
+        embed.add_field(name="WebSocket", value=f"{ws_latency}ms", inline=True)
+        embed.add_field(name="Mensaje", value=f"{msg_latency}ms", inline=True)
+        embed.add_field(name="Estado", value=status, inline=True)
+        embed.set_footer(text="Tiempo real de respuesta del bot")
+
+        await msg.edit(embed=embed)
 
     # =====================================================
     # 8BALL
