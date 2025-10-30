@@ -21,26 +21,7 @@ else:
 
 # === 20+ GIFs con fuente (como Nekotina) ===
 KISS_GIFS = [
-    {"url": "https://i.imgur.com/7z3x8fF.gif", "source": "Anime: Kimi no Koto ga Daisuki"},
-    {"url": "https://i.imgur.com/5t8v2kP.gif", "source": "Anime: Kämpfer"},
-    {"url": "https://i.imgur.com/9k6z7v9.gif", "source": "Anime: Horimiya"},
-    {"url": "https://i.imgur.com/3dK7j2q.gif", "source": "Anime: Kaguya-sama"},
-    {"url": "https://i.imgur.com/5K9b8W2.gif", "source": "Anime: Toradora!"},
-    {"url": "https://i.imgur.com/2vN5m2i.gif", "source": "Anime: Your Lie in April"},
-    {"url": "https://i.imgur.com/1z5n1k1.gif", "source": "Anime: Clannad"},
-    {"url": "https://i.imgur.com/8K9b8W2.gif", "source": "Anime: Violet Evergarden"},
-    {"url": "https://i.imgur.com/9k6z7v9.gif", "source": "Anime: A Silent Voice"},
-    {"url": "https://i.imgur.com/3dK7j2q.gif", "source": "Anime: Re:Zero"},
-    {"url": "https://i.imgur.com/5K9b8W2.gif", "source": "Anime: Fruits Basket"},
-    {"url": "https://i.imgur.com/2vN5m2i.gif", "source": "Anime: Rascal Does Not Dream"},
-    {"url": "https://i.imgur.com/1z5n1k1.gif", "source": "Anime: Spy x Family"},
-    {"url": "https://i.imgur.com/8K9b8W2.gif", "source": "Anime: Jujutsu Kaisen"},
-    {"url": "https://i.imgur.com/9k6z7v9.gif", "source": "Anime: Demon Slayer"},
-    {"url": "https://i.imgur.com/3dK7j2q.gif", "source": "Anime: Attack on Titan"},
-    {"url": "https://i.imgur.com/5K9b8W2.gif", "source": "Anime: Naruto"},
-    {"url": "https://i.imgur.com/2vN5m2i.gif", "source": "Anime: One Piece"},
-    {"url": "https://i.imgur.com/1z5n1k1.gif", "source": "Anime: Death Note"},
-    {"url": "https://i.imgur.com/8K9b8W2.gif", "source": "Anime: My Teen Romantic Comedy"},
+    {"url": "https://imgur.com/gallery/kissanime-o4wYwTk#ldinbWi", "source": "Anime: Kimi no Koto ga Daisuki"},
 ]
 
 # === View ===
