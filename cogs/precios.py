@@ -27,58 +27,98 @@ class Precios(commands.Cog):
             "spaghettitualetti": (60, 0.02, 5, "(M − 60) × 0.02 + 5", "Spaghetti tualetti"),
             "tictacsahur": (37.5, 0.05, 7, "(M − 37.5) × 0.05 + 7", "Tictac sahur"),
             "garamaandmadundung": (50, 0.05, 20, "(M − 50) × 0.05 + 20", "Garama and madundung"),
-            "dragoncannelloni": (200, 0.20, 100, "(M − 200) × 0.20 + 100", "Dragon cannelloni"),
+            "dragoncannelloni": (200, 0.08, 90, "(M − 200) × 0.08 + 90", "Dragon cannelloni"),
             "chillinchili": (25, 0.02, 3, "(M − 25) × 0.02 + 3", "Chillin chili"),
             "eviledon": (31.5, 0.02, 4.5, "(M − 31.5) × 0.02 + 4.5", "Eviledon"),
             "tangtangkelentang": (33.5, 0.04, 5, "(M − 33.5) × 0.04 + 5", "Tang tang kelentang"),
-            "moneymoneypuggy": (21, 0.03, 6, "(M − 21) × 0.03 + 6", "Money money puggy"),
+            "moneymoneypuggy": (21, 0.03, 5, "(M − 21) × 0.03 + 5", "Money money puggy"),
             "lassecretcombinasion": (125, 0.05, 10, "(M − 125) × 0.05 + 10", "La secret combinasion"),
-            "burguroandfryuro": (150, 0.11, 35, "(M − 150) × 0.11 + 35", "Burguro and fryuro"),
+            "burguroandfryuro": (150, 0.05, 30, "(M − 150) × 0.05 + 30", "Burguro and fryuro"),
             "strawberryelephant": (350, 0.30, 700, "(M − 350) × 0.30 + 700", "Strawberry elephant"),
             "laspookygrande": (24.5, 0.03, 2.5, "(M − 24.5) × 0.03 + 2.5", "La spooky grande"),
+            "losspookycombinasionas": (20, 0.03, 2, "(M − 20) × 0.03 + 2", "Los spooky combinasionas"),
             "mieteteirabicicleteira": (26, 0.02, 3, "(M − 26) × 0.02 + 3", "Mieteteira bicicleteira"),
-            "chipsoandqueso": (25, 0.03, 5, "(M − 25) × 0.03 + 5", "Chipso and queso"),
-            "spookyandpumpky": (80, 0.05, 20, "(M − 80) × 0.05 + 20", "Spooky and pumpky"),
-            "meowl": (275, 0.30, 500, "(M − 275) × 0.30 + 500", "Meowl"),
+            "chipsoandqueso": (25, 0.03, 4, "(M − 25) × 0.03 + 4", "Chipso and queso"),
+            "latacocombinasion": (35, 0.04, 5, "(M − 35) × 0.04 + 5", "La taco combinasion"),
             "lacasa": (100, 0.07, 12, "(M − 100) × 0.07 + 12", "La casa boo"),
+            "spookyandpumpky": (80, 0.05, 20, "(M − 80) × 0.05 + 20", "Spooky and pumpky"),
             "headless": (175, 0.08, 30, "(M − 175) × 0.08 + 30", "Headless horseman"),
+            "meowl": (275, 0.30, 500, "(M − 275) × 0.30 + 500", "Meowl"),
         }
 
         self.aliases = {
-            "es": "esoksekolah", "sek": "esoksekolah", "esok": "esoksekolah",
-            "lc": "loscombinasionas", "comb": "loscombinasionas", "combina": "loscombinasionas",
+            # Esok sekolah
+            "es": "esoksekolah", "sekolah": "esoksekolah", "esok": "esoksekolah",
+            # Los combinasionas
+            "lc": "loscombinasionas", "combinasionas": "loscombinasionas", "comb": "loscombinasionas", "combina": "loscombinasionas",
+            # La grande combinasion
             "lgc": "lagrandecombinasion", "grande": "lagrandecombinasion", "lgr": "lagrandecombinasion",
+            # Los hotspositos
             "lhp": "loshotspositos", "hots": "loshotspositos", "positos": "loshotspositos",
+            # Los bros
             "lb": "losbros", "bros": "losbros", "br": "losbros",
+            # Ketupat kepat
             "kk": "ketupatkepat", "ketupat": "ketupatkepat", "kepat": "ketupatkepat",
+            # Nuclearo dinossauro
             "nd": "nuclearodinossauro", "nuclear": "nuclearodinossauro", "dino": "nuclearodinossauro",
+            # Tralaledon
             "tr": "tralaledon", "tralale": "tralaledon", "tral": "tralaledon",
-            "km": "ketchuruandmusturu", "ketchuru": "ketchuruandmusturu", "musturu": "ketchuruandmusturu",
+            # Ketchuru and musturu
+            "km": "ketchuruandmusturu", "musturu": "ketchuruandmusturu", "ketchuru": "ketchuruandmusturu",
+            # La supreme combinasion
             "lsc": "lasupremecombinasion", "supreme": "lasupremecombinasion", "sup": "lasupremecombinasion",
+            # Las sis
             "ls": "lassis", "sis": "lassis", "lasi": "lassis",
+            # Tacorita bicicleta
             "tb": "tacoritabicicleta", "taco": "tacoritabicicleta", "bici": "tacoritabicicleta",
+            # La extinct grande
             "leg": "laextinctgrande", "extinct": "laextinctgrande", "ext": "laextinctgrande",
+            # Los tacoritas
             "lt": "lostacoritas", "tacoritas": "lostacoritas", "taco2": "lostacoritas",
+            # Celularcini viciosini
             "ccv": "celularciniviciosini", "celular": "celularciniviciosini", "vicio": "celularciniviciosini",
+            # Los primos
             "lp": "losprimos", "primos": "losprimos", "prim": "losprimos",
+            # Spaghetti tualetti
             "st": "spaghettitualetti", "spaghetti": "spaghettitualetti", "tua": "spaghettitualetti",
+            # Tictac sahur
             "ts": "tictacsahur", "tictac": "tictacsahur", "sahur": "tictacsahur",
+            # Garama and madundung
             "gm": "garamaandmadundung", "garama": "garamaandmadundung", "madundung": "garamaandmadundung",
+            # Dragon cannelloni
             "dc": "dragoncannelloni", "dragon": "dragoncannelloni", "drag": "dragoncannelloni",
+            # Chillin chili
             "cc": "chillinchili", "chili": "chillinchili", "chill": "chillinchili",
+            # Eviledon
             "ev": "eviledon", "evil": "eviledon", "edon": "eviledon",
+            # Tang tang kelentang
             "ttk": "tangtangkelentang", "kelentang": "tangtangkelentang", "tang": "tangtangkelentang",
+            # Money money puggy
             "mmp": "moneymoneypuggy", "puggy": "moneymoneypuggy", "money": "moneymoneypuggy",
+            # La secret combinasion
             "lsec": "lassecretcombinasion", "secret": "lassecretcombinasion", "sec": "lassecretcombinasion",
+            # Burguro and fryuro
             "bf": "burguroandfryuro", "burguro": "burguroandfryuro", "fryuro": "burguroandfryuro",
+            # Strawberry elephant
             "se": "strawberryelephant", "straw": "strawberryelephant", "elephant": "strawberryelephant",
+            # La spooky grande
             "spooky": "laspookygrande", "spook": "laspookygrande", "spookygrande": "laspookygrande",
+            # Los spooky combinasionas
+            "lsc2": "losspookycombinasionas", "spookycomb": "losspookycombinasionas",
+            # Mieteteira bicicleteira
             "mb": "mieteteirabicicleteira", "miete": "mieteteirabicicleteira", "bicicleteira": "mieteteirabicicleteira",
+            # Chipso and queso
             "cq": "chipsoandqueso", "chipso": "chipsoandqueso", "queso": "chipsoandqueso",
-            "pumpky": "spookyandpumpky", "spump": "spookyandpumpky", "spookypump": "spookyandpumpky",
-            "meow": "meowl", "meo": "meowl", "miau": "meowl",
+            # La taco combinasion
+            "ltc": "latacocombinasion", "tacocomb": "latacocombinasion",
+            # La casa boo
             "boo": "lacasa", "casa": "lacasa",
-            "hh": "headless", "horseman": "headless",
+            # Spooky and pumpky
+            "pumpky": "spookyandpumpky", "spump": "spookyandpumpky", "spookypump": "spookyandpumpky",
+            # Headless horseman
+            "hh": "headless", "horseman": "headless", "head": "headless",
+            # Meowl
+            "meow": "meowl", "meo": "meowl", "miau": "meowl",
         }
 
     def make_embed(self, ctx, nombre: str, formula: str, operacion: str, resultado: float, pretty: str):
@@ -87,15 +127,15 @@ class Precios(commands.Cog):
             description=f"Conversión automática usando la fórmula de **{pretty}**",
             color=discord.Color.blurple()
         )
-        embed.add_field(name="📌 Formula", value=formula, inline=False)
-        embed.add_field(name="📊 Operación", value=operacion, inline=False)
+        embed.add_field(name="📌 Fórmula", value=f"`{formula}`", inline=False)
+        embed.add_field(name="📊 Operación", value=f"`{operacion}`", inline=False)
         embed.add_field(name="💰 Resultado", value=f"**${resultado:.2f}**", inline=False)
         embed.set_footer(text=f"Pedido por {ctx.author}", icon_url=ctx.author.display_avatar.url)
         return embed
 
     def error_embed(self, ctx, msg: str):
         return discord.Embed(
-            title="Error en el comando",
+            title="❌ Error en el comando",
             description=msg,
             color=discord.Color.red()
         ).set_footer(text=f"Pedido por {ctx.author}", icon_url=ctx.author.display_avatar.url)
@@ -112,8 +152,9 @@ class Precios(commands.Cog):
             nombre = self.aliases[nombre]
 
         if nombre not in self.formulas:
-            lista = ", ".join(self.formulas.keys())
-            return await ctx.send(embed=self.error_embed(ctx, f"❌ No encontré la fórmula **{nombre}**. Opciones: {lista}"))
+            sugerencias = [k for k in self.formulas.keys() if nombre in k] or [k for k, v in self.aliases.items() if nombre in k]
+            sugerencia = f" ¿Quisiste decir `{sugerencias[0]}`?" if sugerencias else ""
+            return await ctx.send(embed=self.error_embed(ctx, f"❌ No encontré **{nombre}**.{sugerencia}"))
 
         if m is None:
             return await ctx.send(embed=self.error_embed(
@@ -121,14 +162,14 @@ class Precios(commands.Cog):
             ))
 
         base, mult, suma, formula, pretty = self.formulas[nombre]
-        result = (m - base) * mult + suma
-        operacion = f"( {m} - {base} ) × {mult} + {suma}"
+        result = max(0, (m - base) * mult + suma)  # Evita negativos
+        operacion = f"( {m} − {base} ) × {mult} + {suma}"
 
         await ctx.send(embed=self.make_embed(ctx, nombre, formula, operacion, result, pretty))
 
-    @commands.command(name="helpprices")
+    @commands.command(name="helpprices", aliases=["precios", "listaprecios"])
     async def helpprices(self, ctx):
-        formulas_items = list(self.formulas.items())
+        formulas_items = sorted(self.formulas.items(), key=lambda x: x[1][4])  # Orden alfabético por pretty name
         embeds = []
         prefixes = ["precio", "valor", "cost", "price"]
 
@@ -136,20 +177,20 @@ class Precios(commands.Cog):
 
         for i, page in enumerate(pages, start=1):
             embed = discord.Embed(
-                title="📖 Ayuda de precios",
-                description="Lista de fórmulas y alias.\nUsa cualquiera de estos comandos: "
-                            "`$precio`, `$valor`, `$cost`, `$price`.",
+                title="📖 Lista de Precios Brainrot",
+                description="Usa: `$precio <alias> <millones>`\nEj: `$precio dragon 250`",
                 color=discord.Color.blurple()
             )
             for key, (_, _, _, _, pretty) in page:
-                aliases = [alias for alias, real in self.aliases.items() if real == key]
-                ejemplos = " | ".join([f"${p} {aliases[0]} 100" for p in prefixes]) if aliases else f"{key} 100"
+                aliases = [a for a, real in self.aliases.items() if real == key]
+                alias_str = f"`{', '.join([key] + aliases[:3])}`" + ("..." if len(aliases) > 3 else "")
+                ejemplos = " | ".join([f"`${p} {aliases[0] if aliases else key} 100`" for p in prefixes[:2]])
                 embed.add_field(
                     name=f"🔹 {pretty}",
-                    value=f"Alias: `{', '.join([key] + aliases)}`\nEjemplos: {ejemplos}",
+                    value=f"**Alias:** {alias_str}\n**Ej:** {ejemplos}",
                     inline=False
                 )
-            embed.set_footer(text=f"Página {i}/{len(pages)}")
+            embed.set_footer(text=f"Página {i}/{len(pages)} • Total: {len(self.formulas)} ítems")
             embeds.append(embed)
 
         message = await ctx.send(embed=embeds[0])
@@ -166,6 +207,7 @@ class Precios(commands.Cog):
                 try:
                     reaction, user = await self.bot.wait_for("reaction_add", timeout=60.0, check=check)
                 except asyncio.TimeoutError:
+                    await message.clear_reactions()
                     break
 
                 if str(reaction.emoji) == "➡️" and current_page < len(embeds) - 1:
@@ -175,7 +217,10 @@ class Precios(commands.Cog):
                     current_page -= 1
                     await message.edit(embed=embeds[current_page])
 
-                await message.remove_reaction(reaction, user)
+                try:
+                    await message.remove_reaction(reaction, user)
+                except:
+                    pass
 
 async def setup(bot):
     await bot.add_cog(Precios(bot))
