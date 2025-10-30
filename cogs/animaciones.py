@@ -16,7 +16,6 @@ else:
     interacciones_db = None
     print("⚠️ MongoDB no configurado, las estadísticas no se guardarán.")
 
-
 # === Diccionario de acciones ===
 acciones = {
     "kiss": {
@@ -24,7 +23,6 @@ acciones = {
         "color": discord.Color.pink(),
         "gifs": [
             "https://media1.tenor.com/m/kmxEaVuW8AoAAAAC/kiss-gentle-kiss.gif",
-
         ]
     },
     "hug": {
@@ -62,11 +60,10 @@ acciones = {
     }
 }
 
-
 # === Botones ===
 class ReactionView(discord.ui.View):
     def __init__(self, author, target, tipo):
-        super().__init__(timeout=None)
+        super().__init__(timeout=180)  # 3 minutos timeout
         self.author = author
         self.target = target
         self.tipo = tipo
@@ -75,7 +72,6 @@ class ReactionView(discord.ui.View):
     async def corresponder(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user != self.target:
             return await interaction.response.send_message("Solo la persona mencionada puede responder 💋", ephemeral=True)
-
         data = acciones[self.tipo]
         gif = random.choice(data["gifs"])
         embed = discord.Embed(
@@ -83,7 +79,7 @@ class ReactionView(discord.ui.View):
             color=data["color"]
         )
         embed.set_image(url=gif)
-        await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(embed=embed, ephemeral=False)
 
     @discord.ui.button(label="🚫 Rechazar", style=discord.ButtonStyle.red)
     async def rechazar(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -91,16 +87,13 @@ class ReactionView(discord.ui.View):
             return await interaction.response.send_message("Solo la persona mencionada puede responder.", ephemeral=True)
         await interaction.response.send_message(f"💔 **{self.target.name}** rechazó a **{self.author.name}**...", ephemeral=False)
 
-
 # === Cog principal ===
 class Interacciones(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     async def mostrar_gif(self, destino, embed, gif_url, view):
-        """
-        Envía el embed; si Discord falla en mostrar el GIF, lo envía como archivo adjunto.
-        """
+        """Envía el embed; si Discord falla en mostrar el GIF, lo envía como archivo adjunto."""
         try:
             await destino.send(embed=embed, view=view)
         except discord.HTTPException:
@@ -108,15 +101,15 @@ class Interacciones(commands.Cog):
                 async with session.get(gif_url) as resp:
                     if resp.status == 200:
                         data = await resp.read()
-                        file = discord.File(fp=bytearray(data), filename="gif.gif")
-                        embed.set_image(url="attachment://gif.gif")
+                        file = discord.File(fp=bytearray(data), filename="reaction.gif")
+                        embed.set_image(url="attachment://reaction.gif")
                         await destino.send(embed=embed, view=view, file=file)
 
     async def ejecutar_interaccion(self, ctx_or_inter, tipo, usuario):
         # Distingue entre comando prefijo o slash
         if isinstance(ctx_or_inter, commands.Context):
             autor = ctx_or_inter.author
-            destino = ctx_or_inter.channel
+            destino = ctx_or_inter
         else:
             autor = ctx_or_inter.user
             destino = ctx_or_inter.channel or await ctx_or_inter.user.create_dm()
@@ -130,9 +123,18 @@ class Interacciones(commands.Cog):
 
         data = acciones[tipo]
         gif = random.choice(data["gifs"])
-        desc = data["desc"].format(a=autor.name, b=usuario.name)
+        desc = data["desc"].format(a=autor.display_name, b=usuario.display_name)
 
-        # Guardar interacción en MongoDB
+        # ✅ EMBED CORREGIDO - SIN FOOTER PROBLEMÁTICO
+        embed = discord.Embed(
+            description=desc, 
+            color=data["color"]
+        )
+        embed.set_image(url=gif)
+        # ✅ Footer simple SIN icon_url
+        embed.set_footer(text=f"{tipo.title()} • {autor.display_name}")
+
+        # Guardar en MongoDB
         if interacciones_db is not None:
             await interacciones_db.update_one(
                 {"user1": str(autor.id), "user2": str(usuario.id), "action": tipo},
@@ -140,18 +142,13 @@ class Interacciones(commands.Cog):
                 upsert=True
             )
 
-        embed = discord.Embed(description=desc, color=data["color"])
-        embed.set_image(url=gif)
-        embed.set_footer(text=f"{tipo.title()} • {autor.name}", icon_url=getattr(autor.avatar, 'url', None))
-
         view = ReactionView(autor, usuario, tipo)
 
         # Enviar mensaje
         if isinstance(ctx_or_inter, commands.Context):
             await self.mostrar_gif(destino, embed, gif, view)
         else:
-            await ctx_or_inter.response.defer()
-            await self.mostrar_gif(destino, embed, gif, view)
+            await ctx_or_inter.response.send_message(embed=embed, view=view)
 
     # --- Comandos prefijo ---
     @commands.command()
@@ -195,7 +192,6 @@ class Interacciones(commands.Cog):
     async def slash_bite(self, interaction: discord.Interaction, usuario: discord.Member):
         await self.ejecutar_interaccion(interaction, "bite", usuario)
 
-
 async def setup(bot):
     await bot.add_cog(Interacciones(bot))
-    print("💞 Cog de interacciones cargado correctamente.")
+    print("💞 Cog de interacciones cargado correctamente. ✅")
