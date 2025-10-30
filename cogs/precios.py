@@ -47,77 +47,41 @@ class Precios(commands.Cog):
         }
 
         self.aliases = {
-            # Esok sekolah
             "es": "esoksekolah", "sekolah": "esoksekolah", "esok": "esoksekolah",
-            # Los combinasionas
             "lc": "loscombinasionas", "combinasionas": "loscombinasionas", "comb": "loscombinasionas", "combina": "loscombinasionas",
-            # La grande combinasion
             "lgc": "lagrandecombinasion", "grande": "lagrandecombinasion", "lgr": "lagrandecombinasion",
-            # Los hotspositos
             "lhp": "loshotspositos", "hots": "loshotspositos", "positos": "loshotspositos",
-            # Los bros
             "lb": "losbros", "bros": "losbros", "br": "losbros",
-            # Ketupat kepat
             "kk": "ketupatkepat", "ketupat": "ketupatkepat", "kepat": "ketupatkepat",
-            # Nuclearo dinossauro
             "nd": "nuclearodinossauro", "nuclear": "nuclearodinossauro", "dino": "nuclearodinossauro",
-            # Tralaledon
             "tr": "tralaledon", "tralale": "tralaledon", "tral": "tralaledon",
-            # Ketchuru and musturu
             "km": "ketchuruandmusturu", "musturu": "ketchuruandmusturu", "ketchuru": "ketchuruandmusturu",
-            # La supreme combinasion
             "lsc": "lasupremecombinasion", "supreme": "lasupremecombinasion", "sup": "lasupremecombinasion",
-            # Las sis
             "ls": "lassis", "sis": "lassis", "lasi": "lassis",
-            # Tacorita bicicleta
             "tb": "tacoritabicicleta", "taco": "tacoritabicicleta", "bici": "tacoritabicicleta",
-            # La extinct grande
             "leg": "laextinctgrande", "extinct": "laextinctgrande", "ext": "laextinctgrande",
-            # Los tacoritas
             "lt": "lostacoritas", "tacoritas": "lostacoritas", "taco2": "lostacoritas",
-            # Celularcini viciosini
             "ccv": "celularciniviciosini", "celular": "celularciniviciosini", "vicio": "celularciniviciosini",
-            # Los primos
             "lp": "losprimos", "primos": "losprimos", "prim": "losprimos",
-            # Spaghetti tualetti
             "st": "spaghettitualetti", "spaghetti": "spaghettitualetti", "tua": "spaghettitualetti",
-            # Tictac sahur
             "ts": "tictacsahur", "tictac": "tictacsahur", "sahur": "tictacsahur",
-            # Garama and madundung
             "gm": "garamaandmadundung", "garama": "garamaandmadundung", "madundung": "garamaandmadundung",
-            # Dragon cannelloni
             "dc": "dragoncannelloni", "dragon": "dragoncannelloni", "drag": "dragoncannelloni",
-            # Chillin chili
             "cc": "chillinchili", "chili": "chillinchili", "chill": "chillinchili",
-            # Eviledon
             "ev": "eviledon", "evil": "eviledon", "edon": "eviledon",
-            # Tang tang kelentang
             "ttk": "tangtangkelentang", "kelentang": "tangtangkelentang", "tang": "tangtangkelentang",
-            # Money money puggy
             "mmp": "moneymoneypuggy", "puggy": "moneymoneypuggy", "money": "moneymoneypuggy",
-            # La secret combinasion
             "lsec": "lassecretcombinasion", "secret": "lassecretcombinasion", "sec": "lassecretcombinasion",
-            # Burguro and fryuro
             "bf": "burguroandfryuro", "burguro": "burguroandfryuro", "fryuro": "burguroandfryuro",
-            # Strawberry elephant
             "se": "strawberryelephant", "straw": "strawberryelephant", "elephant": "strawberryelephant",
-            # La spooky grande
             "spooky": "laspookygrande", "spook": "laspookygrande", "spookygrande": "laspookygrande",
-            # Los spooky combinasionas
             "lsc2": "losspookycombinasionas", "spookycomb": "losspookycombinasionas",
-            # Mieteteira bicicleteira
             "mb": "mieteteirabicicleteira", "miete": "mieteteirabicicleteira", "bicicleteira": "mieteteirabicicleteira",
-            # Chipso and queso
             "cq": "chipsoandqueso", "chipso": "chipsoandqueso", "queso": "chipsoandqueso",
-            # La taco combinasion
             "ltc": "latacocombinasion", "tacocomb": "latacocombinasion",
-            # La casa boo
             "boo": "lacasa", "casa": "lacasa",
-            # Spooky and pumpky
             "pumpky": "spookyandpumpky", "spump": "spookyandpumpky", "spookypump": "spookyandpumpky",
-            # Headless horseman
             "hh": "headless", "horseman": "headless", "head": "headless",
-            # Meowl
             "meow": "meowl", "meo": "meowl", "miau": "meowl",
         }
 
@@ -162,14 +126,14 @@ class Precios(commands.Cog):
             ))
 
         base, mult, suma, formula, pretty = self.formulas[nombre]
-        result = max(0, (m - base) * mult + suma)  # Evita negativos
+        result = max(0, (m - base) * mult + suma)  
         operacion = f"( {m} − {base} ) × {mult} + {suma}"
 
         await ctx.send(embed=self.make_embed(ctx, nombre, formula, operacion, result, pretty))
 
     @commands.command(name="helpprices", aliases=["precios", "listaprecios"])
     async def helpprices(self, ctx):
-        formulas_items = sorted(self.formulas.items(), key=lambda x: x[1][4])  # Orden alfabético por pretty name
+        formulas_items = sorted(self.formulas.items(), key=lambda x: x[1][4]) 
         embeds = []
         prefixes = ["precio", "valor", "cost", "price"]
 
