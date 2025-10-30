@@ -16,7 +16,7 @@ class Precios(commands.Cog):
             "ketupatkepat": (35, 0.03, 8, "(M − 35) × 0.03 + 8", "Ketupat kepat"),
             "nuclearodinossauro": (15, 0.05, 7, "(M − 15) × 0.05 + 7", "Nuclearo dinossauro"),
             "tralaledon": (27.5, 0.03, 10, "(M − 27.5) × 0.03 + 10", "Tralaledon"),
-            "ketchuruandmusturu": (42.5, 0.06, 12, "(M − 42.5) × 0.06 + 12", "Ketchuru and musturu"),
+            "ketchuruandmusturu": (42.5, 0.03, 12, "(M − 42.5) × 0.03 + 12", "Ketchuru and musturu"),
             "lasupremecombinasion": (40, 0.11, 25, "(M − 40) × 0.11 + 25", "La supreme combinasion"),
             "lassis": (17.5, 0.02, 1.5, "(M − 17.5) × 0.02 + 1.5", "Las sis"),
             "tacoritabicicleta": (16.5, 0.03, 2, "(M − 16.5) × 0.03 + 2", "Tacorita bicicleta"),
