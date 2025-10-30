@@ -18,10 +18,10 @@ pair_db = None
 if mongo_uri:
     client = motor.motor_asyncio.AsyncIOMotorClient(mongo_uri)
     db = client["siquej_bot"]
-    pair_db = db["parejas"]  # Contador de interacciones entre dos usuarios
-    print("MongoDB conectado: estadísticas de parejas activadas")
+    pair_db = db["parejas"]
+    print("MongoDB conectado: contador de parejas activado")
 else:
-    print("MongoDB no configurado. Contador de parejas desactivado.")
+    print("MongoDB no configurado. Contador desactivado.")
 
 # === 20+ GIFs con fuente (kiss) ===
 KISS_GIFS = [
@@ -63,7 +63,7 @@ class KissView(discord.ui.View):
 
         # Contador de pareja
         count = 1
-        if pair_db:
+        if pair_db is not None:  # ← CORREGIDO
             result = await pair_db.find_one_and_update(
                 {"pair": self.pair_key},
                 {"$inc": {"count": 1}},
@@ -72,20 +72,15 @@ class KissView(discord.ui.View):
             )
             count = result["count"]
 
-        # Mensaje de correspondencia
         msg = f"**{self.target.display_name}** correspondió el beso de **{self.author.display_name}** ~\n"
         msg += f"**{self.author.display_name}** y **{self.target.display_name}** se han besado **{count}** veces."
 
-        # Enviar GIF como archivo
         async with aiohttp.ClientSession() as session:
             async with session.get(self.gif_data["url"]) as resp:
                 if resp.status == 200:
                     data = await resp.read()
                     file = discord.File(fp=io.BytesIO(data), filename="kiss.gif")
-                    await interaction.response.send_message(
-                        content=msg,
-                        file=file
-                    )
+                    await interaction.response.send_message(content=msg, file=file)
         self.stop()
 
     @discord.ui.button(label="Rechazar", style=discord.ButtonStyle.red)
@@ -110,8 +105,8 @@ class Interacciones(commands.Cog):
                     await ctx.send(f"{text}\n*{gif_data['source']}*", file=file, view=view)
                 else:
                     await ctx.send(f"{text}\n*(GIF no disponible)*", view=view)
-        except:
-            await ctx.send(f"{text}\n*(Error al cargar GIF)*", view=view)
+        except Exception as e:
+            await ctx.send(f"{text}\n*(Error: {e})*", view=view)
 
     @commands.command(aliases=["beso", "k"])
     @commands.cooldown(1, 5, commands.BucketType.user)
@@ -123,28 +118,22 @@ class Interacciones(commands.Cog):
         if member.bot:
             return await ctx.send("No puedes besar a un bot.")
 
-        # Seleccionar GIF
         gif_data = random.choice(KISS_GIFS)
         text = f"**{ctx.author.display_name}** besó a **{member.display_name}**"
 
-        # Clave única para la pareja
         user_ids = sorted([ctx.author.id, member.id])
         pair_key = f"{user_ids[0]}_{user_ids[1]}"
 
         # Guardar beso
-        if pair_db:
+        if pair_db is not None:  # ← CORREGIDO
             await pair_db.update_one(
                 {"pair": pair_key},
                 {"$inc": {"count": 1}},
                 upsert=True
             )
 
-        # View
         view = KissView(ctx.author, member, gif_data, pair_key)
         await self.send_gif_with_source(ctx, text, gif_data, view)
-
-    # === Más comandos (hug, pat, etc.) puedes añadir igual ===
-    # (Opcional: dime si quieres que los haga todos)
 
 async def setup(bot):
     await bot.add_cog(Interacciones(bot))
