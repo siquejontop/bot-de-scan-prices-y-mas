@@ -1,10 +1,10 @@
 import discord
 from discord.ext import commands
 from datetime import datetime, timezone
-
+from dateutil.relativedelta import relativedelta
+import aiohttp
 # 🌍 Idioma global por defecto
 bot_language = "es"
-
 # =====================================================
 # 🌍 Traducciones
 # =====================================================
@@ -12,14 +12,11 @@ translations = {
     "es": {
         "lang_changed": "✅ Idioma global cambiado a **Español**.",
         "lang_invalid": "❌ Idioma no soportado. Usa `es` o `en`.",
-
         # Avatar
         "avatar_title": "🖼️ Avatar de {name}",
-
         # Banner
         "banner_title": "🖼️ Banner de {name}",
         "banner_none": "❌ {name} no tiene banner.",
-
         # User Info
         "user_not_found": "❌ Usuario no encontrado",
         "user_not_found_desc": "Debes mencionar un usuario o poner un **ID válido** que esté en este servidor.",
@@ -33,7 +30,6 @@ translations = {
         "userinfo_activity": "🎭 Actividad",
         "userinfo_custom": "💬 Estado personalizado",
         "userinfo_none": "Ninguno",
-
         # Estados
         "status_online": "🟢 En línea",
         "status_offline": "⚫ Desconectado",
@@ -44,7 +40,6 @@ translations = {
         "device_mobile": "📱 Móvil",
         "device_web": "🌐 Web",
         "device_none": "⚫ No conectado",
-
         # Server Info
         "server_title": "🏰 Información del servidor **{name}**",
         "server_id": "🆔 ID",
@@ -55,14 +50,12 @@ translations = {
         "server_channels": "📂 Canales",
         "server_boosts": "🚀 Boosts",
         "server_created": "📅 Creado el",
-
         # Role Info
         "role_title": "🎭 Info del rol {name}",
         "role_id": "🆔 ID",
         "role_mentionable": "📢 Mencionable",
         "role_members": "👥 Miembros con este rol",
         "role_created": "📅 Creado el",
-
         # Bot Info
         "botinfo_title": "🤖 Información del Bot",
         "botinfo_name": "🆔 Nombre",
@@ -71,24 +64,27 @@ translations = {
         "botinfo_servers": "📚 Servidores",
         "botinfo_users": "👥 Usuarios",
         "botinfo_created": "📅 Creación",
-
         # Find User
         "finduser_error": "❌ Uso incorrecto de finduser",
         "finduser_usage": "Formato correcto:\n`$finduser <nombre>`",
         "finduser_none": "⚠️ No encontré usuarios con ese nombre.",
-        "finduser_title": "🔎 Usuarios encontrados con: {name}"
+        "finduser_title": "🔎 Usuarios encontrados con: {name}",
+        # UID Command
+        "uid_created_summary": "Creada",
+        "uid_joined_summary": "Unido",
+        "uid_links": "Enlaces",
+        "uid_avatar": "Avatar",
+        "uid_banner": "Banner",
+        "uid_detailed_format": "{months} mes(es), {days} día(s) y {hours} hora(s) atrás",
     },
     "en": {
         "lang_changed": "✅ Global language changed to **English**.",
         "lang_invalid": "❌ Unsupported language. Use `es` or `en`.",
-
         # Avatar
         "avatar_title": "🖼️ Avatar of {name}",
-
         # Banner
         "banner_title": "🖼️ Banner of {name}",
         "banner_none": "❌ {name} has no banner.",
-
         # User Info
         "user_not_found": "❌ User not found",
         "user_not_found_desc": "You must mention a user or provide a valid **ID** from this server.",
@@ -102,7 +98,6 @@ translations = {
         "userinfo_activity": "🎭 Activity",
         "userinfo_custom": "💬 Custom Status",
         "userinfo_none": "None",
-
         # States
         "status_online": "🟢 Online",
         "status_offline": "⚫ Offline",
@@ -113,7 +108,6 @@ translations = {
         "device_mobile": "📱 Mobile",
         "device_web": "🌐 Web",
         "device_none": "⚫ Not connected",
-
         # Server Info
         "server_title": "🏰 Server Info **{name}**",
         "server_id": "🆔 ID",
@@ -124,14 +118,12 @@ translations = {
         "server_channels": "📂 Channels",
         "server_boosts": "🚀 Boosts",
         "server_created": "📅 Created at",
-
         # Role Info
         "role_title": "🎭 Role Info {name}",
         "role_id": "🆔 ID",
         "role_mentionable": "📢 Mentionable",
         "role_members": "👥 Members with this role",
         "role_created": "📅 Created at",
-
         # Bot Info
         "botinfo_title": "🤖 Bot Information",
         "botinfo_name": "🆔 Name",
@@ -140,20 +132,23 @@ translations = {
         "botinfo_servers": "📚 Servers",
         "botinfo_users": "👥 Users",
         "botinfo_created": "📅 Created at",
-
         # Find User
         "finduser_error": "❌ Incorrect use of finduser",
         "finduser_usage": "Correct format:\n`$finduser <name>`",
         "finduser_none": "⚠️ No users found with that name.",
-        "finduser_title": "🔎 Users found with: {name}"
+        "finduser_title": "🔎 Users found with: {name}",
+        # UID Command
+        "uid_created_summary": "Created",
+        "uid_joined_summary": "Joined",
+        "uid_links": "Links",
+        "uid_avatar": "Avatar",
+        "uid_banner": "Banner",
+        "uid_detailed_format": "{months} month(s), {days} day(s) and {hours} hour(s) ago",
     }
 }
-
-
 class Utils(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
     # =====================================================
     # 👤 Avatar
     # =====================================================
@@ -168,7 +163,6 @@ class Utils(commands.Cog):
         )
         embed.set_image(url=member.avatar.url if member.avatar else member.default_avatar.url)
         await ctx.send(embed=embed)
-
     # =====================================================
     # 👤 Banner
     # =====================================================
@@ -177,7 +171,6 @@ class Utils(commands.Cog):
         lang = translations[bot_language]
         user = user or ctx.author
         user = await self.bot.fetch_user(user.id)
-
         if user.banner:
             embed = discord.Embed(
                 title=lang["banner_title"].format(name=user),
@@ -189,14 +182,12 @@ class Utils(commands.Cog):
             await ctx.send(embed=embed)
         else:
             await ctx.send(lang["banner_none"].format(name=user))
-
     # =====================================================
     # 👤 User Info
     # =====================================================
     @commands.command(aliases=["userinfo", "ui", "user","w"])
     async def usuario(self, ctx, member: str = None):
         lang = translations[bot_language]
-
         if member is None:
             member = ctx.author
         else:
@@ -213,13 +204,11 @@ class Utils(commands.Cog):
                 )
                 await ctx.send(embed=embed)
                 return
-
         # Roles
         roles = [role.mention for role in member.roles if role != ctx.guild.default_role]
         roles_display = ", ".join(roles) if roles else lang["userinfo_none"]
         joined_at = member.joined_at.strftime("%d/%m/%Y %H:%M") if member.joined_at else "?"
         created_at = member.created_at.strftime("%d/%m/%Y %H:%M")
-
         # Estados
         status_map = {
             "online": lang["status_online"],
@@ -228,7 +217,6 @@ class Utils(commands.Cog):
             "dnd": lang["status_dnd"]
         }
         status = status_map.get(str(member.status), lang["status_unknown"])
-
         dispositivos = []
         if str(member.desktop_status) != "offline":
             dispositivos.append(f"{lang['device_desktop']}: {status_map.get(str(member.desktop_status), lang['status_unknown'])}")
@@ -236,38 +224,31 @@ class Utils(commands.Cog):
             dispositivos.append(f"{lang['device_mobile']}: {status_map.get(str(member.mobile_status), lang['status_unknown'])}")
         if str(member.web_status) != "offline":
             dispositivos.append(f"{lang['device_web']}: {status_map.get(str(member.web_status), lang['status_unknown'])}")
-
         dispositivo_text = "\n".join(dispositivos) if dispositivos else lang["device_none"]
-
         embed = discord.Embed(
             title=lang["userinfo_title"].format(name=member.display_name),
             color=discord.Color.blurple(),
             timestamp=datetime.utcnow()
         )
         embed.set_thumbnail(url=member.display_avatar.url)
-
         embed.add_field(name=lang["userinfo_id"], value=member.id, inline=True)
         embed.add_field(name=lang["userinfo_bot"], value="✅" if member.bot else "❌", inline=True)
         embed.add_field(name=lang["userinfo_created"], value=created_at, inline=False)
         embed.add_field(name=lang["userinfo_joined"], value=joined_at, inline=False)
         embed.add_field(name=lang["userinfo_roles"].format(count=len(roles)), value=roles_display, inline=False)
         embed.add_field(name=lang["userinfo_status"], value=f"{status}\n\n{dispositivo_text}", inline=False)
-
         # Custom status
         custom_status_text = None
         for actividad in member.activities:
             if actividad.type == discord.ActivityType.custom:
                 if actividad.name:
                     custom_status_text = actividad.name
-
         embed.add_field(
             name=lang["userinfo_custom"],
             value=custom_status_text if custom_status_text else lang["userinfo_none"],
             inline=False
         )
-
         await ctx.send(embed=embed)
-
     # =====================================================
     # 🏰 Server Info
     # =====================================================
@@ -275,7 +256,6 @@ class Utils(commands.Cog):
     async def server(self, ctx):
         lang = translations[bot_language]
         guild = ctx.guild
-
         embed = discord.Embed(
             title=lang["server_title"].format(name=guild.name),
             color=discord.Color.blue(),
@@ -285,24 +265,18 @@ class Utils(commands.Cog):
             embed.set_thumbnail(url=guild.icon.url)
         if guild.banner:
             embed.set_image(url=guild.banner.url)
-
         embed.add_field(name=lang["server_id"], value=f"`{guild.id}`", inline=True)
         embed.add_field(name=lang["server_owner"], value=f"{guild.owner.mention}", inline=True)
         embed.add_field(name=lang["server_region"], value=str(guild.preferred_locale).upper(), inline=True)
-
         total_members = guild.member_count
         humans = len([m for m in guild.members if not m.bot])
         bots = len([m for m in guild.members if m.bot])
         embed.add_field(name=lang["server_members"], value=f"Total: **{total_members}**\n👤 {humans}\n🤖 {bots}", inline=True)
-
         embed.add_field(name=lang["server_roles"], value=f"{len(guild.roles)}", inline=True)
         embed.add_field(name=lang["server_channels"], value=f"Texto: {len(guild.text_channels)}\nVoz: {len(guild.voice_channels)}\nCategorías: {len(guild.categories)}", inline=True)
-
         embed.add_field(name=lang["server_boosts"], value=f"Nivel: {guild.premium_tier}\nTotal: {guild.premium_subscription_count}", inline=True)
         embed.add_field(name=lang["server_created"], value=f"<t:{int(guild.created_at.timestamp())}:R>", inline=True)
-
         await ctx.send(embed=embed)
-
     # =====================================================
     # 🎭 Role Info
     # =====================================================
@@ -318,7 +292,6 @@ class Utils(commands.Cog):
         embed.add_field(name=lang["role_members"], value=len(role.members), inline=False)
         embed.add_field(name=lang["role_created"], value=role.created_at.strftime("%d/%m/%Y %H:%M"), inline=False)
         await ctx.send(embed=embed)
-
     # =====================================================
     # 📊 Bot Info
     # =====================================================
@@ -338,7 +311,6 @@ class Utils(commands.Cog):
         embed.add_field(name=lang["botinfo_created"], value=self.bot.user.created_at.strftime("%d/%m/%Y %H:%M"), inline=False)
         embed.set_thumbnail(url=self.bot.user.avatar.url if self.bot.user.avatar else self.bot.user.default_avatar.url)
         await ctx.send(embed=embed)
-
     # =====================================================
     # 🕵️ Find User
     # =====================================================
@@ -363,7 +335,6 @@ class Utils(commands.Cog):
             color=discord.Color.gold()
         )
         await ctx.send(embed=embed)
-
     # =====================================================
     # 🌍 Bot Language (solo owner)
     # =====================================================
@@ -377,7 +348,6 @@ class Utils(commands.Cog):
             return
         bot_language = lang
         await ctx.send(translations[bot_language]["lang_changed"])
-
     # =====================================================
     # 🌍 Extraer título de links
     # =====================================================
@@ -387,7 +357,6 @@ class Utils(commands.Cog):
                 async with session.get(url) as resp:
                     if resp.status == 200:
                         text = await resp.text()
-
                         # 🎶 Spotify (el título suele estar en la etiqueta <title>)
                         if "spotify.com" in url:
                             start = text.find("<title>")
@@ -395,7 +364,6 @@ class Utils(commands.Cog):
                             if start != -1 and end != -1:
                                 title = text[start+7:end]
                                 return title.replace(" | Spotify", "").strip()
-
                         # ▶️ YouTube
                         if "youtube.com" in url or "youtu.be" in url:
                             start = text.find("<title>")
@@ -403,11 +371,9 @@ class Utils(commands.Cog):
                             if start != -1 and end != -1:
                                 title = text[start+7:end]
                                 return title.replace("- YouTube", "").strip()
-
         except Exception as e:
             print(f"Error obteniendo título: {e}")
         return None
-
     # =====================================================
     # 🌍 Establecer estado del bot
     # =====================================================
@@ -420,26 +386,20 @@ class Utils(commands.Cog):
             "idle": discord.Status.idle,
             "invisible": discord.Status.invisible
         }
-
         tipos = {
             "playing": discord.ActivityType.playing,
             "listening": discord.ActivityType.listening,
             "watching": discord.ActivityType.watching,
             "streaming": discord.ActivityType.streaming
         }
-
         if not estado or estado.lower() not in estados:
             return await ctx.send("⚠️ Estados válidos: `online`, `dnd`, `idle`, `invisible`")
-
         if not tipo or tipo.lower() not in tipos:
             return await ctx.send("⚠️ Tipos válidos: `playing`, `listening`, `watching`, `streaming`")
-
         if not mensaje:
             mensaje = "Sin actividad"
-
         url = None
         display_text = mensaje
-
         # 🎶 Si es un link (Spotify o YouTube)
         if mensaje.startswith("http://") or mensaje.startswith("https://"):
             url = mensaje
@@ -448,15 +408,12 @@ class Utils(commands.Cog):
                 display_text = title
             else:
                 display_text = "Actividad personalizada"
-
         # 📡 Configurar presencia
         if tipo.lower() == "streaming":
             actividad = discord.Streaming(name=display_text, url=url if url else "https://twitch.tv/discord")
         else:
             actividad = discord.Activity(type=tipos[tipo.lower()], name=display_text)
-
         await self.bot.change_presence(status=estados[estado.lower()], activity=actividad)
-
         # 📊 Embed de confirmación
         embed = discord.Embed(
             title="✅ Estado actualizado",
@@ -467,11 +424,50 @@ class Utils(commands.Cog):
         embed.add_field(name="💬 Mensaje", value=display_text, inline=False)
         if url:
             embed.add_field(name="🔗 Link", value=url, inline=False)
-
         embed.set_footer(text=f"Comando ejecutado por {ctx.author}", icon_url=ctx.author.display_avatar.url)
         await ctx.send(embed=embed)
-
-
+    # =====================================================
+    # 👤 UID Command
+    # =====================================================
+    @commands.command()
+    async def uid(self, ctx, member: discord.Member = None):
+        lang = translations[bot_language]
+        member = member or ctx.author
+        user = await self.bot.fetch_user(member.id)
+        now = datetime.now(timezone.utc)
+        created_at = member.created_at.replace(tzinfo=timezone.utc)
+        joined_at = member.joined_at.replace(tzinfo=timezone.utc) if member.joined_at else None
+        created_delta = relativedelta(now, created_at)
+        joined_delta = relativedelta(now, joined_at) if joined_at else None
+        # Timestamps for relative
+        created_timestamp = int(created_at.timestamp())
+        joined_timestamp = int(joined_at.timestamp()) if joined_at else 0
+        created_relative = f"<t:{created_timestamp}:R>"
+        joined_relative = f"<t:{joined_timestamp}:R>" if joined_at else "?"
+        # Absolute created
+        created_absolute = created_at.strftime("%m/%d/%Y, %I:%M:%S %p")
+        # Detailed
+        created_total_months = created_delta.years * 12 + created_delta.months
+        created_detailed = lang["uid_detailed_format"].format(months=created_total_months, days=created_delta.days, hours=created_delta.hours)
+        joined_total_months = joined_delta.years * 12 + joined_delta.months if joined_delta else 0
+        joined_detailed = lang["uid_detailed_format"].format(months=joined_total_months, days=joined_delta.days, hours=joined_delta.hours) if joined_delta else "?"
+        # URLs
+        avatar_url = member.display_avatar.url
+        banner_url = user.banner.url if user.banner else None
+        # Embed
+        embed = discord.Embed(
+            title=f"{member.display_name} ({member.id})",
+            color=discord.Color.dark_gray(),
+            timestamp=now
+        )
+        embed.set_thumbnail(url=avatar_url)
+        if banner_url:
+            embed.set_image(url=banner_url)
+        description = f"🟢 {created_detailed}\n🔴 {created_absolute}\n🟣 {joined_detailed}\n\n{lang['uid_created_summary']} {created_relative}\n{lang['uid_joined_summary']} {joined_relative}\n{lang['uid_links']}\n[{lang['uid_avatar']}]({avatar_url})"
+        if banner_url:
+            description += f" [{lang['uid_banner']}]({banner_url})"
+        embed.description = description
+        await ctx.send(embed=embed)
 # =====================================================
 # 🔌 Setup obligatorio
 # =====================================================
