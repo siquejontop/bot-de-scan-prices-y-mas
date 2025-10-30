@@ -72,19 +72,6 @@ intents.messages = True  # Necesario para comandos
 bot = commands.Bot(command_prefix=",", intents=intents, help_command=None)  # help_command=None evita errores
 
 # ============================================================
-# COMANDO DE PRUEBA (para verificar embeds)
-# ============================================================
-@bot.command()
-async def test(ctx):
-    embed = discord.Embed(
-        title="PRUEBA DE EMBED",
-        description="Si ves el GIF, **todo funciona**.",
-        color=discord.Color.green()
-    )
-    embed.set_image(url="https://media1.tenor.com/m/kmxEaVuW8AoAAAAC/kiss-gentle-kiss.gif")
-    await ctx.send(embed=embed)
-
-# ============================================================
 # Eventos
 # ============================================================
 @bot.event
