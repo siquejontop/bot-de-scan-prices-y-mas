@@ -6,19 +6,17 @@ class Precios(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.formulas = {
-            # === LISTA 1 ===
             "esoksekolah": (30, 0.01, 1, "(M − 30) × 0.01 + 1", "Esok sekolah"),
             "loscombinasionas": (15, 0.01, 1.5, "(M − 15) × 0.01 + 1.5", "Los combinasionas"),
             "lagrandecombinasion": (10, 0.02, 1.5, "(M − 10) × 0.02 + 1.5", "La grande combinasion"),
-            "loshotspositos": (20, 0.03, 2.5, "(M − 20) × 0.03 + 2.5", "Los hotspositos"),
+            "loshotspositos": (20, 0.02, 2, "(M − 20) × 0.02 + 2", "Los hotspositos"),
             "losbros": (24, 0.02, 3, "(M − 24) × 0.02 + 3", "Los bros"),
-            "ketupatkepat": (35, 0.03, 8, "(M − 35) × 0.03 + 8", "Ketupat kepat"),
-            "nuclearodinossauro": (15, 0.05, 7, "(M − 15) × 0.05 + 7", "Nuclearo dinossauro"),
-            "tralaledon": (27.5, 0.03, 10, "(M − 27.5) × 0.03 + 10", "Tralaledon"),
+            "ketupatkepat": (35, 0.02, 8, "(M − 35) × 0.02 + 8", "Ketupat kepat"),
+            "nuclearodinossauro": (15, 0.03, 7, "(M − 15) × 0.03 + 7", "Nuclearo dinossauro"),
+            "tralaledon": (27.5, 0.02, 7, "(M − 27.5) × 0.02 + 7", "Tralaledon"),
             "ketchuruandmusturu": (42.5, 0.03, 12, "(M − 42.5) × 0.03 + 12", "Ketchuru and musturu"),
             "lasupremecombinasion": (40, 0.11, 25, "(M − 40) × 0.11 + 25", "La supreme combinasion"),
 
-            # === LISTA 2 ===
             "lassis": (17.5, 0.02, 1.5, "(M − 17.5) × 0.02 + 1.5", "Las sis"),
             "tacoritabicicleta": (16.5, 0.02, 2, "(M − 16.5) × 0.02 + 2", "Tacorita bicicleta"),
             "laextinctgrande": (23.5, 0.02, 3, "(M − 23.5) × 0.02 + 3", "La extinct grande"),
@@ -30,7 +28,6 @@ class Precios(commands.Cog):
             "garamaandmadundung": (50, 0.05, 20, "(M − 50) × 0.05 + 20", "Garama and madundung"),
             "dragoncannelloni": (200, 0.08, 90, "(M − 200) × 0.08 + 90", "Dragon cannelloni"),
 
-            # === LISTA 3 ===
             "chillinchili": (25, 0.02, 3, "(M − 25) × 0.02 + 3", "Chillin chili"),
             "eviledon": (31.5, 0.02, 4.5, "(M − 31.5) × 0.02 + 4.5", "Eviledon"),
             "tangtangkelentang": (33.5, 0.04, 5, "(M − 33.5) × 0.04 + 5", "Tang tang kelentang"),
@@ -39,7 +36,6 @@ class Precios(commands.Cog):
             "burguroandfryuro": (150, 0.05, 30, "(M − 150) × 0.05 + 30", "Burguro and fryuro"),
             "strawberryelephant": (350, 0.30, 700, "(M − 350) × 0.30 + 700", "Strawberry elephant"),
 
-            # === LISTA 4 - HALLOWEEN ===
             "laspookygrande": (24.5, 0.02, 2.5, "(M − 24.5) × 0.02 + 2.5", "La spooky grande"),
             "losspookycombinasionas": (20, 0.02, 2, "(M − 20) × 0.02 + 2", "Los spooky combinasionas"),
             "mieteteirabicicleteira": (26, 0.02, 3, "(M − 26) × 0.02 + 3", "Mieteteira bicicleteira"),
