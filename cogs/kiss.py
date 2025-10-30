@@ -1,4 +1,3 @@
-# cogs/interacciones.py
 import discord
 from discord.ext import commands
 import random
@@ -8,7 +7,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# === MongoDB ===
 mongo_uri = os.getenv("MONGO_URI")
 pair_db = None
 if mongo_uri:
@@ -19,12 +17,10 @@ if mongo_uri:
 else:
     print("MongoDB no configurado")
 
-# === 20+ GIFs con fuente (como Nekotina) ===
 KISS_GIFS = [
-    {"url": "https://imgur.com/gallery/kissanime-o4wYwTk#ldinbWi", "source": "Anime: Kimi no Koto ga Daisuki"},
+    {"url": "https://raw.githubusercontent.com/siquejontop/bot-de-scan-prices-y-mas/main/assets/kiss.gif", "source": "Anime: Kiss x Sis"},
 ]
 
-# === View ===
 class KissView(discord.ui.View):
     def __init__(self, author, target, pair_key, gif_data):
         super().__init__(timeout=300)
@@ -64,7 +60,6 @@ class KissView(discord.ui.View):
         await interaction.response.send_message(f"**{self.target.display_name}** rechazó el beso de **{self.author.display_name}**...")
         self.stop()
 
-# === Cog ===
 class Interacciones(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -79,10 +74,8 @@ class Interacciones(commands.Cog):
         if member.bot:
             return await ctx.send("No puedes besar a un bot.")
 
-        # GIF aleatorio
         gif_data = random.choice(KISS_GIFS)
 
-        # Contador
         user_ids = sorted([ctx.author.id, member.id])
         pair_key = f"{user_ids[0]}_{user_ids[1]}"
         count = 1
@@ -95,7 +88,6 @@ class Interacciones(commands.Cog):
             )
             count = result.get("count", 1)
 
-        # Embed inicial
         embed = discord.Embed(color=0xFFC0CB)
         embed.description = f"**{ctx.author.display_name}** le dio un dulce beso a **{member.display_name}** 💕\n"
         embed.description += f"**{ctx.author.display_name}** y **{member.display_name}** se han besado **{count}** veces."
@@ -107,4 +99,4 @@ class Interacciones(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(Interacciones(bot))
-    print("Cog estilo Nekotina cargado")
+    print("Cog de besos cargados")
