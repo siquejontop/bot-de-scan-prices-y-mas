@@ -31,7 +31,7 @@ class KissView(discord.ui.View):
         self.pair_key = pair_key
         self.gif_data = gif_data
 
-    @discord.ui.button(label="Corresponder", style=discord.ButtonStyle.green, emoji="❤️")
+    @discord.ui.button(label="Corresponder", style=discord.ButtonStyle.grey, emoji="❤️")
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user != self.target:
             return await interaction.response.send_message("Solo el mencionado puede corresponder.", ephemeral=True)
@@ -55,7 +55,7 @@ class KissView(discord.ui.View):
         await interaction.response.send_message(embed=embed)
         self.stop()
 
-    @discord.ui.button(label="No corresponder", style=discord.ButtonStyle.red, emoji="❌")
+    @discord.ui.button(label="No corresponder", style=discord.ButtonStyle.grey, emoji="❌")
     async def reject(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user != self.target:
             return await interaction.response.send_message("Solo el mencionado puede rechazar.", ephemeral=True)
