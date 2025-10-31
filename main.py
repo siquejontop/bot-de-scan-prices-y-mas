@@ -1,3 +1,4 @@
+# main.py
 import discord
 from discord.ext import commands
 import os
@@ -61,15 +62,15 @@ def run_flask_server():
     logger.info("Servidor Flask iniciado en puerto 10000")
 
 # ============================================================
-# BOT + INTENTS (CORREGIDOS)
+# BOT + INTENTS
 # ============================================================
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 intents.guilds = True
-intents.messages = True  # Necesario para comandos
+intents.messages = True
 
-bot = commands.Bot(command_prefix=",", intents=intents, help_command=None)  # help_command=None evita errores
+bot = commands.Bot(command_prefix=",", intents=intents, help_command=None)
 
 # ============================================================
 # Eventos
@@ -80,6 +81,13 @@ async def on_ready():
     print(f"\n{banner}")
     logger.info(f"Bot conectado como {bot.user} (ID: {bot.user.id})")
     await bot.change_presence(activity=discord.Game("online"))
+
+    # SINCRONIZAR SLASH COMMANDS
+    try:
+        synced = await bot.tree.sync()
+        logger.info(f"{len(synced)} comandos slash sincronizados: {[cmd.name for cmd in synced]}")
+    except Exception as e:
+        logger.error(f"Error sincronizando comandos: {e}")
 
 @bot.event
 async def on_command_error(ctx, error):
