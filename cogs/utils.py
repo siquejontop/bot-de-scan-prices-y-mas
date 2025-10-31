@@ -1,3 +1,4 @@
+# cogs/utils.py
 import discord
 from discord.ext import commands
 from datetime import datetime, timezone
@@ -9,12 +10,12 @@ class Utils(commands.Cog):
         self.bot = bot
 
     # =====================================================
-    # USER INFO – ESTILO DISCORD OFICIAL (CORREGIDO)
+    # ,w → PERFIL ESTILO DISCORD OFICIAL
     # =====================================================
-    @commands.command(aliases=["userinfo", "ui", "user", "w"])
-    async def usuario(self, ctx, member: discord.Member = None):
+    @commands.command(name="w", aliases=["userinfo", "ui", "user"])
+    async def w(self, ctx, member: discord.Member = None):
         member = member or ctx.author
-        user = member._user  # Solo para datos globales (banner, about, flags)
+        user = member._user
 
         # === BADGES ===
         badges = []
@@ -34,11 +35,8 @@ class Utils(commands.Cog):
         for flag, emoji in badge_map.items():
             if getattr(flags, flag, False):
                 badges.append(emoji)
-        
-        # CORREGIDO: Usa member.premium_since
         if member.premium_since:
             badges.append("<:nitro:1139666214857199616>")
-        
         badges_text = " ".join(badges) if badges else "Sin insignias"
 
         # === ESTADO ===
@@ -61,7 +59,7 @@ class Utils(commands.Cog):
         if member.desktop_status != discord.Status.offline: devices.append("<:desktop:1139666242854236160>")
         if member.mobile_status != discord.Status.offline: devices.append("<:mobile:1139666244859092992>")
         if member.web_status != discord.Status.offline: devices.append("<:web:1139666246851321856>")
-        devices_text = " ".join(devices) if devices else "<:status_offline:1139666228861976576>"
+        devices_text = " ".join(devices) if devices else "No conectado"
 
         # === CUSTOM STATUS ===
         custom_status = "Ninguno"
@@ -130,7 +128,7 @@ class Utils(commands.Cog):
         await ctx.send(embed=embed, view=view)
 
     # =====================================================
-    # AVATAR
+    # ,avatar
     # =====================================================
     @commands.command(aliases=["pfp", "av"])
     async def avatar(self, ctx, member: discord.Member = None):
@@ -141,7 +139,7 @@ class Utils(commands.Cog):
         await ctx.send(embed=embed)
 
     # =====================================================
-    # BANNER
+    # ,banner
     # =====================================================
     @commands.command()
     async def banner(self, ctx, user: discord.User = None):
@@ -155,7 +153,7 @@ class Utils(commands.Cog):
             await ctx.send(f"**{user.display_name}** no tiene banner.")
 
     # =====================================================
-    # SERVER INFO
+    # ,server
     # =====================================================
     @commands.command(aliases=["serverinfo", "sv", "guild"])
     async def server(self, ctx):
@@ -178,7 +176,7 @@ class Utils(commands.Cog):
         await ctx.send(embed=embed)
 
     # =====================================================
-    # ROLE INFO
+    # ,roleinfo
     # =====================================================
     @commands.command(aliases=["ri"])
     async def roleinfo(self, ctx, role: discord.Role):
@@ -190,7 +188,7 @@ class Utils(commands.Cog):
         await ctx.send(embed=embed)
 
     # =====================================================
-    # FIND USER
+    # ,finduser
     # =====================================================
     @commands.command(aliases=["fu", "buscar"])
     async def finduser(self, ctx, *, nombre: str = None):
@@ -204,35 +202,30 @@ class Utils(commands.Cog):
         await ctx.send(embed=embed)
 
     # =====================================================
-    # PING MEJORADO: Latencia + Velocidad de Internet
+    # ,ping → VELOCIDAD DE INTERNET
     # =====================================================
     @commands.command()
     async def ping(self, ctx):
         embed = discord.Embed(title="Calculando velocidad...", color=discord.Color.orange())
         msg = await ctx.send(embed=embed)
 
-        # Latencia del WebSocket
-        ws_latency = round(self.bot.latency * 1000)
-
-        # Latencia real (mensaje enviado → editado)
         before = datetime.utcnow()
         await msg.edit(content=None, embed=embed)
         after = datetime.utcnow()
         msg_latency = round((after - before).total_seconds() * 1000)
+        ws_latency = round(self.bot.latency * 1000)
 
-        # Estado de conexión
         status = "Excelente" if msg_latency < 150 else "Bueno" if msg_latency < 300 else "Lento"
 
         embed = discord.Embed(title="Velocidad de Internet", color=discord.Color.green() if status == "Excelente" else discord.Color.yellow() if status == "Bueno" else discord.Color.red())
         embed.add_field(name="WebSocket", value=f"{ws_latency}ms", inline=True)
         embed.add_field(name="Mensaje", value=f"{msg_latency}ms", inline=True)
         embed.add_field(name="Estado", value=status, inline=True)
-        embed.set_footer(text="Tiempo real de respuesta del bot")
-
+        embed.set_footer(text="Tiempo real de respuesta")
         await msg.edit(embed=embed)
 
     # =====================================================
-    # 8BALL
+    # ,8ball
     # =====================================================
     @commands.command(aliases=["8ball", "pregunta", "bola"])
     async def _8ball(self, ctx, *, pregunta: str = None):
@@ -250,7 +243,8 @@ class Utils(commands.Cog):
         await ctx.send(embed=embed)
 
 # =====================================================
-# SETUP
+# SETUP OBLIGATORIO
 # =====================================================
 async def setup(bot):
     await bot.add_cog(Utils(bot))
+    print("Cog 'utils' cargado correctamente")
