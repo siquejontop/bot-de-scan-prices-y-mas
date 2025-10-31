@@ -36,7 +36,7 @@ class LTC(commands.Cog):
                 data = await resp.json()
                 return data["litecoin"]["usd"], data["litecoin"]["eur"]
         except:
-            return 75.0, 69.0
+            return 75.0, 69.0  # Fallback
 
     async def get_ltc_balance(self, address):
         try:
@@ -81,6 +81,9 @@ class LTC(commands.Cog):
         bio.seek(0)
         return bio
 
+    # =====================================================
+    # /setltc
+    # =====================================================
     @app_commands.command(name="setltc", description="Establece tu dirección de pago LTC.")
     @app_commands.describe(address="Tu dirección LTC (empieza con L o M)")
     async def setltc(self, interaction: discord.Interaction, address: str):
@@ -100,8 +103,12 @@ class LTC(commands.Cog):
             color=discord.Color.green()
         )
         embed.set_image(url="attachment://ltc_qr.png")
+        embed.set_footer(text="Solo tú puedes ver este mensaje.")
         await interaction.response.send_message(embed=embed, file=file, ephemeral=True)
 
+    # =====================================================
+    # /mybal
+    # =====================================================
     @app_commands.command(name="mybal", description="Muestra tu balance LTC (usa /setltc primero).")
     async def mybal(self, interaction: discord.Interaction):
         user_id = str(interaction.user.id)
@@ -118,7 +125,7 @@ class LTC(commands.Cog):
         txs = await self.get_ltc_transactions(address)
 
         if confirmed is None:
-            embed = discord.Embed(title="Error", description="No se pudo obtener el balance.", color=discord.Color.red())
+            embed = discord.Embed(title="Error", description="No se pudo obtener el balance. Dirección inválida o API caída.", color=discord.Color.red())
             return await msg.edit(embed=embed)
 
         usd_c = confirmed * ltc_usd
@@ -130,9 +137,21 @@ class LTC(commands.Cog):
 
         embed = discord.Embed(title="Balance LTC", color=discord.Color.from_rgb(52, 152, 219))
         embed.add_field(name="Dirección", value=f"`{address}`", inline=False)
-        embed.add_field(name="Confirmado", value=f"{confirmed:,.8f} LTC\n${usd_c:,.2f} USD\n€{eur_c:,.2f} EUR", inline=True)
-        embed.add_field(name="Sin Confirmar", value=f"{unconfirmed:,.8f} LTC\n${usd_u:,.2f} USD\n€{eur_u:,.2f} EUR", inline=True)
-        embed.add_field(name="Total Recibido", value=f"{total_received:,.8f} LTC\n${usd_t:,.2f} USD\n€{eur_t:,.2f} EUR", inline=False)
+        embed.add_field(
+            name="Confirmado",
+            value=f"{confirmed:,.8f} LTC\n${usd_c:,.2f} USD\n€{eur_c:,.2f} EUR",
+            inline=True
+        )
+        embed.add_field(
+            name="Sin Confirmar",
+            value=f"{unconfirmed:,.8f} LTC\n${usd_u:,.2f} USD\n€{eur_u:,.2f} EUR",
+            inline=True
+        )
+        embed.add_field(
+            name="Total Recibido",
+            value=f"{total_received:,.8f} LTC\n${usd_t:,.2f} USD\n€{eur_t:,.2f} EUR",
+            inline=False
+        )
 
         if txs:
             tx_text = "\n".join([f"`{t['hash']}...` {t['value']:,.4f} LTC" for t in txs])
@@ -140,9 +159,10 @@ class LTC(commands.Cog):
         else:
             embed.add_field(name="Últimas 5 Transacciones", value="No se encontraron.", inline=False)
 
+        # BOTONES CORREGIDOS (EMOJIS UNICODE)
         view = discord.ui.View()
-        view.add_item(discord.ui.Button(label="Ver en Explorer", url=f"https://blockchair.com/litecoin/address/{address}", emoji="Search"))
-        view.add_item(discord.ui.Button(label="Info de Tx", url=f"https://blockchair.com/litecoin/address/{address}", emoji="Info"))
+        view.add_item(discord.ui.Button(label="Ver en Explorer", url=f"https://blockchair.com/litecoin/address/{address}", emoji="🔍"))
+        view.add_item(discord.ui.Button(label="Info de Tx", url=f"https://blockchair.com/litecoin/address/{address}", emoji="ℹ️"))
 
         qr_bytes = self.generate_qr(address)
         file = discord.File(qr_bytes, filename="ltc_qr.png")
@@ -150,5 +170,9 @@ class LTC(commands.Cog):
 
         await msg.edit(embed=embed, view=view, attachments=[file])
 
+# =====================================================
+# SETUP
+# =====================================================
 async def setup(bot):
     await bot.add_cog(LTC(bot))
+    print("Cog 'ltc' cargado correctamente")
