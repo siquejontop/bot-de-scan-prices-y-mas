@@ -29,7 +29,7 @@ class LTC(commands.Cog):
         with open(self.file_path, "w", encoding="utf-8") as f:
             json.dump(self.addresses, f, indent=2)
 
-    async def get_ltc_price(self) -> Tuple[float, float]:
+    async def get_ltc_price(self):
         try:
             async with self.session.get(
                 "https://api.coingecko.com/api/v3/simple/price?ids=litecoin&vs_currencies=usd,eur",
@@ -91,119 +91,69 @@ class LTC(commands.Cog):
     # =====================================================
     # /setltc
     # =====================================================
-    @app_commands.command(name="setltc", description="Establece tu dirección de pago LTC.")
-    @app_commands.describe(address="Tu dirección LTC (empieza con L o M)")
+    @app_commands.command(name="setltc", description="Guarda tu dirección LTC")
+    @app_commands.describe(address="Tu dirección (L o M)")
     async def setltc(self, interaction: discord.Interaction, address: str):
         address = address.strip()
         if not (address.startswith("L") or address.startswith("M")) or len(address) < 26:
-            await interaction.response.send_message(
-                "Dirección LTC inválida. Debe empezar con `L` o `M`."
-            )
+            await interaction.response.send_message("Dirección inválida. Usa L o M.")
             return
 
-        await interaction.response.defer()
-
-        user_id = str(interaction.user.id)
-        self.addresses[user_id] = address
+        self.addresses[str(interaction.user.id)] = address
         self.save_addresses()
 
-        qr_bio = self.generate_qr(address)
-        file = discord.File(qr_bio, "ltc_qr.png")
+        qr = self.generate_qr(address)
+        file = discord.File(qr, "qr.png")
 
         embed = discord.Embed(
-            title="Dirección LTC Guardada",
-            description=f"**Dirección:** `{address}`\nUsa `/mybal` para ver tu balance.",
+            title="Dirección Guardada",
+            description=f"`{address}`\nUsa `/mybal` para ver tu saldo.",
             color=discord.Color.green()
         )
-        embed.set_image(url="attachment://ltc_qr.png")
-        embed.set_footer(text=f"Guardado por {interaction.user.display_name}")
+        embed.set_image(url="attachment://qr.png")
 
-        await interaction.followup.send(embed=embed, file=file)
+        await interaction.response.send_message(embed=embed, file=file)
 
     # =====================================================
     # /mybal
     # =====================================================
-    @app_commands.command(name="mybal", description="Muestra tu balance LTC (usa /setltc primero).")
+    @app_commands.command(name="mybal", description="Muestra tu balance LTC")
     async def mybal(self, interaction: discord.Interaction):
-        user_id = str(interaction.user.id)
-        address = self.addresses.get(user_id)
+        address = self.addresses.get(str(interaction.user.id))
         if not address:
-            await interaction.response.send_message(
-                "No has establecido tu dirección. Usa `/setltc <dirección>` primero."
-            )
+            await interaction.response.send_message("Primero usa `/setltc <dirección>`")
             return
 
-        await interaction.response.defer()
-
-        loading = discord.Embed(title="Cargando balance LTC...", color=discord.Color.blue())
-        await interaction.followup.send(embed=loading)
+        await interaction.response.defer()  # Espera sin "cargando"
 
         usd, eur = await self.get_ltc_price()
-        confirmed, unconfirmed, total_received = await self.get_ltc_balance(address)
+        confirmed, unconfirmed, total = await self.get_ltc_balance(address)
         txs = await self.get_ltc_transactions(address)
 
         if confirmed is None:
-            error = discord.Embed(title="Error", description="No se pudo obtener el balance.", color=discord.Color.red())
-            await interaction.followup.send(embed=error)
+            await interaction.followup.send("Error al obtener el balance.")
             return
 
-        # === EMBED DE TEXTO PLANO ===
-        embed = discord.Embed(
-            title="Balance LTC",
-            color=discord.Color.from_rgb(52, 152, 219)
-        )
-
-        # Dirección
+        # === TEXTO SIMPLE ===
+        embed = discord.Embed(title="Balance LTC", color=0x3498db)
         embed.add_field(name="Dirección", value=f"`{address}`", inline=False)
 
-        # Balances
-        embed.add_field(
-            name="Confirmed Balance",
-            value=f"**{confirmed:,.8f} LTC**\n"
-                  f"${confirmed * usd:,.2f} USD\n"
-                  f"€{confirmed * eur:,.2f} EUR",
-            inline=True
-        )
-        embed.add_field(
-            name="Unconfirmed Balance",
-            value=f"**{unconfirmed:,.8f} LTC**\n"
-                  f"${unconfirmed * usd:,.2f} USD\n"
-                  f"€{unconfirmed * eur:,.2f} EUR",
-            inline=True
-        )
-        embed.add_field(
-            name="Total Received",
-            value=f"**{total_received:,.8f} LTC**\n"
-                  f"${total_received * usd:,.2f} USD\n"
-                  f"€{total_received * eur:,.2f} EUR",
-            inline=True
-        )
+        embed.add_field(name="Confirmado", value=f"**{confirmed:,.8f} LTC**\n${confirmed*usd:,.2f}", inline=True)
+        embed.add_field(name="Sin confirmar", value=f"**{unconfirmed:,.8f} LTC**\n${unconfirmed*usd:,.2f}", inline=True)
+        embed.add_field(name="Total recibido", value=f"**{total:,.8f} LTC**\n${total*usd:,.2f}", inline=True)
 
-        # Transacciones
-        tx_text = ""
-        for tx in txs[:5]:
-            tx_text += f"`{tx['hash']}` → **{tx['value']:.8f} LTC** (${tx['value'] * usd:.2f})\n"
-        if not tx_text:
-            tx_text = "*Sin transacciones recientes.*"
-
-        embed.add_field(name="Últimas 5 Transacciones", value=tx_text, inline=False)
+        tx_text = "\n".join([f"`{t['hash']}` → {t['value']:.8f} LTC" for t in txs[:5]]) or "Sin transacciones"
+        embed.add_field(name="Últimas 5 TX", value=tx_text, inline=False)
 
         # QR
-        qr_bio = self.generate_qr(address)
-        file = discord.File(qr_bio, "ltc_qr.png")
-        embed.set_image(url="attachment://ltc_qr.png")
-
-        # Footer
-        embed.set_footer(text=f"Balance de {interaction.user.display_name}")
+        qr = self.generate_qr(address)
+        file = discord.File(qr, "qr.png")
+        embed.set_image(url="attachment://qr.png")
 
         # Botones
         view = discord.ui.View(timeout=None)
-        view.add_item(discord.ui.Button(
-            label="Get Transaction Info", url=f"https://blockchair.com/litecoin/address/{address}", emoji="i"
-        ))
-        view.add_item(discord.ui.Button(
-            label="View on Explorer", url=f"https://blockchair.com/litecoin/address/{address}", emoji="Search"
-        ))
+        view.add_item(discord.ui.Button(label="Blockchair", url=f"https://blockchair.com/litecoin/address/{address}", emoji="Link"))
+        view.add_item(discord.ui.Button(label="Explorer", url=f"https://blockchair.com/litecoin/address/{address}", emoji="Magnifying Glass"))
 
         await interaction.followup.send(embed=embed, file=file, view=view)
 
@@ -212,6 +162,4 @@ class LTC(commands.Cog):
 
 
 async def setup(bot):
-    cog = LTC(bot)
-    await bot.add_cog(cog)
-    print("Cog 'ltc' cargado (TEXTO PLANO + QR)")
+    await bot.add_cog(LTC(bot))
