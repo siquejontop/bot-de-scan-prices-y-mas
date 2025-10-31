@@ -10,43 +10,43 @@ class Utils(commands.Cog):
         self.bot = bot
 
     # =====================================================
-    # ,w → PERFIL ESTILO DISCORD OFICIAL (SIN ABOUT)
+    # ,w → PERFIL ESTILO DISCORD OFICIAL (SIN ERRORES)
     # =====================================================
     @commands.command(name="w", aliases=["userinfo", "ui", "user"])
     async def w(self, ctx, member: discord.Member = None):
         member = member or ctx.author
-        user = await self.bot.fetch_user(member.id)  # Para banner y flags
+        user = await self.bot.fetch_user(member.id)
 
         # === BADGES ===
         badges = []
         flags = user.public_flags
         badge_map = {
-            "staff": "<:discord_staff:1139666211892232212>",
-            "partner": "<:partner:1139666213855191040>",
-            "certified_moderator": "<:certified_mod:1139666209916751872>",
-            "hypesquad": "<:hypesquad:1139666215893581824>",
-            "hypesquad_bravery": "<:bravery:1139666205877604352>",
-            "hypesquad_brilliance": "<:brilliance:1139666207890804806>",
-            "hypesquad_balance": "<:balance:1139666203924557844>",
-            "early_supporter": "<:early_supporter:1139666208872292352>",
-            "bug_hunter": "<:bug_hunter:1139666210130157568>",
-            "bug_hunter_level_2": "<:bug_hunter_gold:1139666212848164864>",
+            "staff": "🛠️",
+            "partner": "🤝",
+            "certified_moderator": "🛡️",
+            "hypesquad": "🏠",
+            "hypesquad_bravery": "🦁",
+            "hypesquad_brilliance": "🦄",
+            "hypesquad_balance": "🦚",
+            "early_supporter": "💎",
+            "bug_hunter": "🐞",
+            "bug_hunter_level_2": "🦟",
         }
         for flag, emoji in badge_map.items():
             if getattr(flags, flag, False):
                 badges.append(emoji)
         if member.premium_since:
-            badges.append("<:nitro:1139666214857199616>")
+            badges.append("✨")  # Nitro
         badges_text = " ".join(badges) if badges else "Sin insignias"
 
         # === ESTADO ===
         status_icons = {
-            discord.Status.online: "<:status_online:1139666228908093440>",
-            discord.Status.idle: "<:status_idle:1139666230808150016>",
-            discord.Status.dnd: "<:status_dnd:1139666226869698560>",
-            discord.Status.offline: "<:status_offline:1139666228861976576>"
+            discord.Status.online: "🟢",
+            discord.Status.idle: "🟡",
+            discord.Status.dnd: "🔴",
+            discord.Status.offline: "⚫"
         }
-        status_emoji = status_icons.get(member.status, "<:status_offline:1139666228861976576>")
+        status_emoji = status_icons.get(member.status, "⚫")
         status_text = {
             discord.Status.online: "En línea",
             discord.Status.idle: "Ausente",
@@ -56,9 +56,9 @@ class Utils(commands.Cog):
 
         # === DISPOSITIVOS ===
         devices = []
-        if member.desktop_status != discord.Status.offline: devices.append("<:desktop:1139666242854236160>")
-        if member.mobile_status != discord.Status.offline: devices.append("<:mobile:1139666244859092992>")
-        if member.web_status != discord.Status.offline: devices.append("<:web:1139666246851321856>")
+        if member.desktop_status != discord.Status.offline: devices.append("🖥️")
+        if member.mobile_status != discord.Status.offline: devices.append("📱")
+        if member.web_status != discord.Status.offline: devices.append("🌐")
         devices_text = " ".join(devices) if devices else "No conectado"
 
         # === CUSTOM STATUS ===
@@ -81,7 +81,7 @@ class Utils(commands.Cog):
         banner_url = user.banner.url if user.banner else None
         avatar_url = member.display_avatar.url
 
-        # === EMBED (SIN ABOUT) ===
+        # === EMBED ===
         embed = discord.Embed(
             color=member.color if member.color != discord.Color.default() else discord.Color.blurple(),
             timestamp=datetime.utcnow()
@@ -106,8 +106,8 @@ class Utils(commands.Cog):
         embed.add_field(
             name="Entradas",
             value=(
-                f"<:discord_logo:1139666250008381440> **Discord** <t:{discord_join}:R>\n"
-                f"<:server_icon:1139666252000694272> **Servidor** <t:{server_join}:R>"
+                f"Discord <t:{discord_join}:R>\n"
+                f"Servidor <t:{server_join}:R>"
             ),
             inline=True
         )
@@ -115,11 +115,11 @@ class Utils(commands.Cog):
         embed.add_field(name="\u200b", value="\u200b", inline=True)
         embed.add_field(name="Roles", value=roles_text, inline=True)
 
-        # === BOTONES ===
+        # === BOTONES (EMOJIS UNICODE) ===
         view = discord.ui.View()
-        view.add_item(discord.ui.Button(label="Avatar", url=avatar_url, emoji="<:avatar_icon:1139666254001672192>"))
+        view.add_item(discord.ui.Button(label="Avatar", url=avatar_url, emoji="🖼️"))
         if banner_url:
-            view.add_item(discord.ui.Button(label="Banner", url=banner_url, emoji="<:banner_icon:1139666256002363392>"))
+            view.add_item(discord.ui.Button(label="Banner", url=banner_url, emoji="🖼️"))
 
         await ctx.send(embed=embed, view=view)
 
@@ -134,7 +134,7 @@ class Utils(commands.Cog):
         embed.set_footer(text=f"ID: {member.id}")
         await ctx.send(embed=embed)
 
-    # =====================================================
+    # ===================================================== teach
     # ,banner
     # =====================================================
     @commands.command()
