@@ -36,7 +36,7 @@ class LTC(commands.Cog):
                 data = await resp.json()
                 return data["litecoin"]["usd"], data["litecoin"]["eur"]
         except:
-            return 75.0, 69.0  # Fallback
+            return 75.0, 69.0
 
     async def get_ltc_balance(self, address):
         try:
@@ -62,8 +62,7 @@ class LTC(commands.Cog):
                     return [
                         {
                             "hash": tx["hash"][:8],
-                            "value": sum(out["value"] for out in tx["outputs"] if out["addresses"] and out["addresses"][0] == address) / 1e8,
-                            "time": tx.get("confirmed", tx.get("received", ""))
+                            "value": sum(out["value"] for out in tx["outputs"] if out["addresses"] and out["addresses"][0] == address) / 1e8
                         }
                         for tx in txs
                     ]
@@ -90,6 +89,9 @@ class LTC(commands.Cog):
         if not (address.startswith("L") or address.startswith("M")) or len(address) < 26:
             return await interaction.response.send_message("Dirección LTC inválida. Debe empezar con `L` o `M`.", ephemeral=True)
 
+        # DEFER: Permite hasta 15 minutos
+        await interaction.response.defer(ephemeral=True)
+
         user_id = str(interaction.user.id)
         self.addresses[user_id] = address
         self.save_addresses()
@@ -104,7 +106,9 @@ class LTC(commands.Cog):
         )
         embed.set_image(url="attachment://ltc_qr.png")
         embed.set_footer(text="Solo tú puedes ver este mensaje.")
-        await interaction.response.send_message(embed=embed, file=file, ephemeral=True)
+
+        # followup.send() → no expira
+        await interaction.followup.send(embed=embed, file=file, ephemeral=True)
 
     # =====================================================
     # /mybal
@@ -116,17 +120,21 @@ class LTC(commands.Cog):
         if not address:
             return await interaction.response.send_message("No has establecido tu dirección. Usa `/setltc <dirección>` primero.", ephemeral=True)
 
-        embed = discord.Embed(title="Cargando balance LTC...", color=discord.Color.blue())
-        await interaction.response.send_message(embed=embed, ephemeral=True)
-        msg = await interaction.original_response()
+        # DEFER: Espera datos
+        await interaction.response.defer(ephemeral=True)
 
+        # CARGANDO...
+        embed = discord.Embed(title="Cargando balance LTC...", color=discord.Color.blue())
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
+        # Obtener datos
         ltc_usd, ltc_eur = await self.get_ltc_price()
         confirmed, unconfirmed, total_received = await self.get_ltc_balance(address)
         txs = await self.get_ltc_transactions(address)
 
         if confirmed is None:
             embed = discord.Embed(title="Error", description="No se pudo obtener el balance. Dirección inválida o API caída.", color=discord.Color.red())
-            return await msg.edit(embed=embed)
+            return await interaction.followup.send(embed=embed, ephemeral=True)
 
         usd_c = confirmed * ltc_usd
         eur_c = confirmed * ltc_eur
@@ -159,7 +167,7 @@ class LTC(commands.Cog):
         else:
             embed.add_field(name="Últimas 5 Transacciones", value="No se encontraron.", inline=False)
 
-        # BOTONES CORREGIDOS (EMOJIS UNICODE)
+        # BOTONES CON EMOJIS REALES
         view = discord.ui.View()
         view.add_item(discord.ui.Button(label="Ver en Explorer", url=f"https://blockchair.com/litecoin/address/{address}", emoji="🔍"))
         view.add_item(discord.ui.Button(label="Info de Tx", url=f"https://blockchair.com/litecoin/address/{address}", emoji="ℹ️"))
@@ -168,7 +176,8 @@ class LTC(commands.Cog):
         file = discord.File(qr_bytes, filename="ltc_qr.png")
         embed.set_image(url="attachment://ltc_qr.png")
 
-        await msg.edit(embed=embed, view=view, attachments=[file])
+        # followup.send() → no expira
+        await interaction.followup.send(embed=embed, view=view, file=file, ephemeral=True)
 
 # =====================================================
 # SETUP
