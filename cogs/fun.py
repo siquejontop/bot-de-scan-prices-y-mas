@@ -19,18 +19,7 @@ VENTAS_CHANNEL_ID = 1424451810059354122
 MMGUIDE_CHANNEL_ID = 1421331155604471839
 
 OWNER_ID = 335596693603090434
-# ------------------------------------
 
-class Fun(commands.Cog):
-    def __init__(self, bot: commands.Bot):
-        self.bot = bot
-
-    # Ping
-    @commands.command()
-    async def ping(self, ctx: commands.Context):
-        await ctx.send("🏓 Pong!")
-
-    # Enviar DM robusto
     async def send_dm(self, member: discord.Member, embed: discord.Embed, staff_channel: typing.Optional[discord.TextChannel] = None, max_attempts: int = 3):
         delay = 2
         for attempt in range(1, max_attempts + 1):
