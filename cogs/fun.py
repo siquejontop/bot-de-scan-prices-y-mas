@@ -20,7 +20,12 @@ MMGUIDE_CHANNEL_ID = 1421331155604471839
 
 OWNER_ID = 335596693603090434
 
-    async def send_dm(self, member: discord.Member, embed: discord.Embed, staff_channel: typing.Optional[discord.TextChannel] = None, max_attempts: int = 3):
+
+class Fun(commands.Cog):
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+
+    async def send_dm(self, member: typing.Union[discord.Member, discord.User], embed: discord.Embed, staff_channel: typing.Optional[discord.TextChannel] = None, max_attempts: int = 3):
         delay = 2
         for attempt in range(1, max_attempts + 1):
             try:
@@ -30,7 +35,10 @@ OWNER_ID = 335596693603090434
             except discord.Forbidden:
                 print(f"⚠️ {member} tiene los DMs cerrados.")
                 if staff_channel:
-                    await staff_channel.send(f"⚠️ No se pudo enviar DM a {member.mention}, tiene los mensajes directos cerrados.")
+                    try:
+                        await staff_channel.send(f"⚠️ No se pudo enviar DM a {member.mention}, tiene los mensajes directos cerrados.")
+                    except Exception:
+                        pass
                 return False
             except Exception as e:
                 print(f"❌ Error enviando DM a {member} (intento {attempt}): {e}")
@@ -38,14 +46,19 @@ OWNER_ID = 335596693603090434
                     await asyncio.sleep(delay)
                     delay *= 2
         if staff_channel:
-            await staff_channel.send(f"⚠️ No se pudo enviar DM a {member.mention} tras {max_attempts} intentos.")
+            try:
+                await staff_channel.send(f"⚠️ No se pudo enviar DM a {member.mention} tras {max_attempts} intentos.")
+            except Exception:
+                pass
         return False
 
     # Esperar confirmación del rol
     async def wait_for_role(self, guild: discord.Guild, member_id: int, role_id: int, attempts: int = 5, interval: float = 1.0) -> typing.Optional[discord.Member]:
         for i in range(attempts):
             try:
-                member = await guild.fetch_member(member_id)
+                member = guild.get_member(member_id)
+                if not member:
+                    member = await guild.fetch_member(member_id)
             except Exception as e:
                 print(f"Error fetch_member intento {i+1}: {e}")
                 member = None
@@ -70,7 +83,7 @@ OWNER_ID = 335596693603090434
             if ordered_role and ordered_role.id in {r.id for r in added_roles}:
                 if staff_channel:
                     await staff_channel.send(f"📢 {after.mention} recibió el rol de **Hitter**")
-                
+
                 confirmed_member = await self.wait_for_role(after.guild, after.id, ORDERED_ROLE_ID)
                 if confirmed_member:
                     reglas_channel = after.guild.get_channel(REGLAS_CHANNEL_ID)
@@ -97,14 +110,14 @@ OWNER_ID = 335596693603090434
                 mmguide_channel = after.guild.get_channel(MMGUIDE_CHANNEL_ID)
                 if ventas_channel:
                     await ventas_channel.send(f"⭐ {after.mention} recibió el rol de **Middleman**")
-                    
+
                     embed_channel = discord.Embed(
                         title="Bienvenido Middleman",
                         description=(f"No olvides de leer {mmguide_channel.mention} para evitar cualquier problema en el servidor."),
                         color=discord.Color.gold()
                     )
                     await ventas_channel.send(embed=embed_channel)
-                
+
                 confirmed_member = await self.wait_for_role(after.guild, after.id, MIDDLEMANNOVATO_ROLE_ID)
                 if confirmed_member:
                     dm_embed_mm = discord.Embed(
@@ -121,42 +134,59 @@ OWNER_ID = 335596693603090434
             # Notificación al owner si se recibe un rol superior a Middleman Novato
             if mm_role:
                 for role in added_roles:
-                    if role.position > mm_role.position:  # Rol superior a Middleman Novato
-                        # Obtener quién asignó el rol desde los registros de auditoría
-                        async for entry in after.guild.audit_logs(limit=5, action=discord.AuditLogAction.member_role_update):
-                            if entry.target.id == after.id and role.id in entry.after.roles:
-                                assigner = entry.user
-                                break
-                        else:
+                    try:
+                        if role.position > mm_role.position:  # Rol superior a Middleman Novato
                             assigner = None
+                            async for entry in after.guild.audit_logs(limit=5, action=discord.AuditLogAction.member_role_update):
+                                # entry.after puede ser None o un objeto con .roles
+                                try:
+                                    entry_target_id = getattr(entry.target, "id", None)
+                                    entry_after_roles = getattr(entry.after, "roles", None)
+                                    role_ids_in_entry = {r.id for r in entry_after_roles} if entry_after_roles else set()
+                                except Exception:
+                                    entry_target_id = None
+                                    role_ids_in_entry = set()
 
-                        owner = self.bot.get_user(OWNER_ID)
-                        if owner:
-                            notify_embed = discord.Embed(
-                                title="🚨 Nuevo rol superior detectado",
-                                description=(
-                                    f"El usuario **{after.name}#{after.discriminator}** (ID: {after.id}) ha recibido el rol **{role.name}** (ID: {role.id}) "
-                                    f"que es superior a **Middleman Novato**.\n"
-                                    f"Servidor: **{after.guild.name}**"
-                                ),
-                                color=discord.Color.red(),
-                                timestamp=datetime.now(COLOMBIA_TZ)
-                            )
-                            if assigner:
-                                notify_embed.add_field(
-                                    name="Asignado por",
-                                    value=f"**{assigner.name}#{assigner.discriminator}** (ID: {assigner.id})",
-                                    inline=True
+                                if entry_target_id == after.id and role.id in role_ids_in_entry:
+                                    assigner = entry.user
+                                    break
+
+                            owner = self.bot.get_user(OWNER_ID)
+                            if owner is None:
+                                try:
+                                    owner = await self.bot.fetch_user(OWNER_ID)
+                                except Exception:
+                                    owner = None
+
+                            if owner:
+                                notify_embed = discord.Embed(
+                                    title="🚨 Nuevo rol superior detectado",
+                                    description=(
+                                        f"El usuario **{after.name}#{after.discriminator}** (ID: {after.id}) ha recibido el rol **{role.name}** (ID: {role.id}) "
+                                        f"que es superior a **Middleman Novato**.\n"
+                                        f"Servidor: **{after.guild.name}**"
+                                    ),
+                                    color=discord.Color.red(),
+                                    timestamp=datetime.now(COLOMBIA_TZ)
                                 )
-                            else:
-                                notify_embed.add_field(
-                                    name="Asignado por",
-                                    value="Desconocido (no encontrado en registros recientes)",
-                                    inline=True
-                                )
-                            notify_embed.set_footer(text=f"Fecha: {datetime.now(COLOMBIA_TZ).strftime('%Y-%m-%d %H:%M:%S %Z')}")
-                            await self.send_dm(owner, notify_embed)
-                        break
+                                if assigner:
+                                    notify_embed.add_field(
+                                        name="Asignado por",
+                                        value=f"**{assigner.name}#{assigner.discriminator}** (ID: {assigner.id})",
+                                        inline=True
+                                    )
+                                else:
+                                    notify_embed.add_field(
+                                        name="Asignado por",
+                                        value="Desconocido (no encontrado en registros recientes)",
+                                        inline=True
+                                    )
+                                notify_embed.set_footer(text=f"Fecha: {datetime.now(COLOMBIA_TZ).strftime('%Y-%m-%d %H:%M:%S %Z')}")
+                                await self.send_dm(owner, notify_embed)
+                            break
+                    except Exception as e:
+                        print(f"Error comprobando rol superior: {e}")
+                        continue
 
         except Exception as e:
             print("Error en on_member_update:", e)
@@ -167,7 +197,7 @@ OWNER_ID = 335596693603090434
     async def unbanall(self, ctx: commands.Context):
         await ctx.send("🔓 Iniciando proceso de desbaneo...")
         try:
-            banned_users = [entry async for entry in ctx.guild.bans()]
+            banned_users = await ctx.guild.bans()  # devuelve lista de BanEntry
             if not banned_users:
                 await ctx.send("✅ No hay usuarios baneados.")
                 return
@@ -196,7 +226,7 @@ OWNER_ID = 335596693603090434
     @commands.has_permissions(ban_members=True)
     async def banlist(self, ctx: commands.Context):
         try:
-            banned_entries = [ban async for ban in ctx.guild.bans()]
+            banned_entries = await ctx.guild.bans()
             total = len(banned_entries)
             embed = discord.Embed(
                 title="📊 Lista de baneados",
@@ -207,6 +237,7 @@ OWNER_ID = 335596693603090434
             await ctx.send(embed=embed)
         except Exception as e:
             await ctx.send(f"⚠️ Error al obtener la lista de baneados: {e}")
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Fun(bot))
