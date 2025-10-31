@@ -10,12 +10,12 @@ class Utils(commands.Cog):
         self.bot = bot
 
     # =====================================================
-    # ,w → PERFIL ESTILO DISCORD OFICIAL
+    # ,w → PERFIL ESTILO DISCORD OFICIAL (100% FUNCIONAL)
     # =====================================================
     @commands.command(name="w", aliases=["userinfo", "ui", "user"])
     async def w(self, ctx, member: discord.Member = None):
         member = member or ctx.author
-        user = member._user  # Solo para datos globales (banner, flags)
+        user = await self.bot.fetch_user(member.id)  # NECESARIO para .bio y .banner
 
         # === BADGES ===
         badges = []
@@ -81,8 +81,8 @@ class Utils(commands.Cog):
         banner_url = user.banner.url if user.banner else None
         avatar_url = member.display_avatar.url
 
-        # === ABOUT ME – CORREGIDO: Usa member.about
-        about = member.about or "No tiene descripción."
+        # === ABOUT ME – CORREGIDO: Usa user.bio
+        about = user.bio or "No tiene descripción."
 
         # === EMBED ===
         embed = discord.Embed(
