@@ -5,6 +5,10 @@ import asyncio
 class Precios(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+
+        # ============================================
+        #                   FORMULAS
+        # ============================================
         self.formulas = {
             "esoksekolah": (30, 0.01, 1, "(M − 30) × 0.01 + 1", "Esok sekolah"),
             "loscombinasionas": (15, 0.01, 1.5, "(M − 15) × 0.01 + 1.5", "Los combinasionas"),
@@ -47,51 +51,129 @@ class Precios(commands.Cog):
             "meowl": (275, 0.30, 500, "(M − 275) × 0.30 + 500", "Meowl"),
         }
 
+        # ============================================
+        #                ALIASES MEGAPACK
+        # ============================================
         self.aliases = {
-            # === LISTA 1 ===
-            "es": "esoksekolah", "sekolah": "esoksekolah", "esok": "esoksekolah",
-            "lc": "loscombinasionas", "combinasionas": "loscombinasionas", "comb": "loscombinasionas", "combina": "loscombinasionas",
-            "lgc": "lagrandecombinasion", "grande": "lagrandecombinasion", "lgr": "lagrandecombinasion",
+            # Esok sekolah
+            "es": "esoksekolah", "sek": "esoksekolah", "sekolah": "esoksekolah",
+            "esok": "esoksekolah", "esoksk": "esoksekolah", "skl": "esoksekolah",
+
+            # Los combinasionas
+            "lc": "loscombinasionas", "comb": "loscombinasionas",
+            "combi": "loscombinasionas", "combina": "loscombinasionas",
+            "lcmb": "loscombinasionas",
+
+            # Grande combinasion
+            "lgc": "lagrandecombinasion", "lg": "lagrandecombinasion",
+            "bigcomb": "lagrandecombinasion",
+
+            # Hotspósitos
             "lhp": "loshotspositos", "hots": "loshotspositos", "positos": "loshotspositos",
-            "lb": "losbros", "bros": "losbros", "br": "losbros",
-            "kk": "ketupatkepat", "ketupat": "ketupatkepat", "kepat": "ketupatkepat",
-            "nd": "nuclearodinossauro", "nuclear": "nuclearodinossauro", "dino": "nuclearodinossauro",
-            "tr": "tralaledon", "tralale": "tralaledon", "tral": "tralaledon",
-            "km": "ketchuruandmusturu", "musturu": "ketchuruandmusturu", "ketchuru": "ketchuruandmusturu",
-            "lsc": "lasupremecombinasion", "supreme": "lasupremecombinasion", "sup": "lasupremecombinasion",
+            "hotsp": "loshotspositos",
 
-            # === LISTA 2 ===
-            "ls": "lassis", "sis": "lassis", "lasi": "lassis",
-            "tb": "tacoritabicicleta", "taco": "tacoritabicicleta", "bici": "tacoritabicicleta",
-            "leg": "laextinctgrande", "extinct": "laextinctgrande", "ext": "laextinctgrande",
-            "lt": "lostacoritas", "tacoritas": "lostacoritas", "taco2": "lostacoritas",
-            "ccv": "celularciniviciosini", "celular": "celularciniviciosini", "vicio": "celularciniviciosini",
-            "lp": "losprimos", "primos": "losprimos", "prim": "losprimos",
-            "st": "spaghettitualetti", "spaghetti": "spaghettitualetti", "tua": "spaghettitualetti",
-            "ts": "tictacsahur", "tictac": "tictacsahur", "sahur": "tictacsahur",
-            "gm": "garamaandmadundung", "garama": "garamaandmadundung", "madundung": "garamaandmadundung",
-            "dc": "dragoncannelloni", "dragon": "dragoncannelloni", "drag": "dragoncannelloni",
+            # Bros
+            "lb": "losbros", "bros": "losbros", "br": "losbros", "bro": "losbros",
 
-            # === LISTA 3 ===
-            "cc": "chillinchili", "chili": "chillinchili", "chill": "chillinchili",
-            "ev": "eviledon", "evil": "eviledon", "edon": "eviledon",
-            "ttk": "tangtangkelentang", "kelentang": "tangtangkelentang", "tang": "tangtangkelentang",
-            "mmp": "moneymoneypuggy", "puggy": "moneymoneypuggy", "money": "moneymoneypuggy",
-            "lsec": "lassecretcombinasion", "secret": "lassecretcombinasion", "sec": "lassecretcombinasion",
-            "bf": "burguroandfryuro", "burguro": "burguroandfryuro", "fryuro": "burguroandfryuro",
-            "se": "strawberryelephant", "straw": "strawberryelephant", "elephant": "strawberryelephant",
+            # Ketupat kepat
+            "kk": "ketupatkepat", "ket": "ketupatkepat", "kep": "ketupatkepat",
+            "ketupat": "ketupatkepat", "kepat": "ketupatkepat",
 
-            # === LISTA 4 - HALLOWEEN ===
-            "lsg": "laspookygrande", "spooky": "laspookygrande", "spook": "laspookygrande", "spookygrande": "laspookygrande",
-            "lsc2": "losspookycombinasionas", "spookycomb": "losspookycombinasionas",
-            "mb": "mieteteirabicicleteira", "miete": "mieteteirabicicleteira", "bicicleteira": "mieteteirabicicleteira",
-            "cq": "chipsoandqueso", "chipso": "chipsoandqueso", "queso": "chipsoandqueso",
-            "ltc": "latacocombinasion", "tacocomb": "latacocombinasion",
-            "lcb": "lacasa", "boo": "lacasa", "casa": "lacasa",
-            "sp": "spookyandpumpky", "pumpky": "spookyandpumpky", "spump": "spookyandpumpky", "spookypump": "spookyandpumpky",
-            "hh": "headless", "horseman": "headless", "head": "headless",
+            # Nuclearo dinossauro
+            "nd": "nuclearodinossauro", "nuke": "nuclearodinossauro",
+            "dino": "nuclearodinossauro", "dn": "nuclearodinossauro",
+
+            # Tralaledon
+            "tr": "tralaledon", "tral": "tralaledon", "lale": "tralaledon",
+
+            # Ketchuru & musturu
+            "km": "ketchuruandmusturu", "musturu": "ketchuruandmusturu",
+            "ketchuru": "ketchuruandmusturu",
+
+            # Las sis
+            "ls": "lassis", "sis": "lassis",
+
+            # Tacorita bicicleta
+            "tb": "tacoritabicicleta", "taco": "tacoritabicicleta",
+            "bici": "tacoritabicicleta",
+
+            # Extinct grande
+            "leg": "laextinctgrande", "ext": "laextinctgrande",
+
+            # Tacoritas
+            "lt": "lostacoritas", "tacoritas": "lostacoritas",
+
+            # Celularcini viciosini
+            "ccv": "celularciniviciosini", "celular": "celularciniviciosini",
+            "vicio": "celularciniviciosini",
+
+            # Primos
+            "lp": "losprimos", "prim": "losprimos",
+
+            # Spaghetti tualetti
+            "st": "spaghettitualetti",
+
+            # Tictac sahur
+            "ts": "tictacsahur",
+
+            # Garama & madundung
+            "gm": "garamaandmadundung",
+
+            # Dragon cannelloni
+            "dc": "dragoncannelloni", "dragon": "dragoncannelloni",
+
+            # Chillin chili
+            "cc": "chillinchili", "chili": "chillinchili",
+
+            # Eviledon
+            "ev": "eviledon",
+
+            # Tang tang kelentang
+            "ttk": "tangtangkelentang",
+
+            # Money money puggy
+            "mmp": "moneymoneypuggy", "puggy": "moneymoneypuggy",
+
+            # Secret combinasion
+            "lsec": "lassecretcombinasion",
+
+            # Burguro & fryuro
+            "bf": "burguroandfryuro",
+
+            # Strawberry elephant
+            "se": "strawberryelephant",
+
+            # Spooky grande
+            "lsg": "laspookygrande",
+
+            # Spooky combinasionas
+            "lsc": "losspookycombinasionas",
+
+            # Bicicleteira
+            "mb": "mieteteirabicicleteira",
+
+            # Chipso y queso
+            "cq": "chipsoandqueso",
+
+            # Taco combinasion
+            "ltc": "latacocombinasion",
+
+            # Casa boo
+            "lcb": "lacasa",
+
+            # Spooky pumpky
+            "sp": "spookyandpumpky",
+
+            # Headless horseman
+            "hh": "headless", "horseman": "headless",
+
+            # Meowl  
             "meow": "meowl", "meo": "meowl", "miau": "meowl",
         }
+
+        # ===============================================================
+        # EMBED GENERATORS
+        # ===============================================================
 
     def make_embed(self, ctx, nombre: str, formula: str, operacion: str, resultado: float, pretty: str):
         embed = discord.Embed(
@@ -112,74 +194,114 @@ class Precios(commands.Cog):
             color=discord.Color.red()
         ).set_footer(text=f"Pedido por {ctx.author}", icon_url=ctx.author.display_avatar.url)
 
+    # ===============================================================
+    #                    COMANDO PRECIO
+    # ===============================================================
     @commands.command(name="precio", aliases=["price", "cost", "valor"])
     async def precio(self, ctx, nombre: str = None, m: float = None):
         if not nombre:
             return await ctx.send(embed=self.error_embed(
                 ctx, f"Debes especificar el nombre. Ejemplo: `{ctx.prefix}{ctx.command} spooky 100`"
             ))
+
         nombre = nombre.lower()
+
         if nombre in self.aliases:
             nombre = self.aliases[nombre]
+
         if nombre not in self.formulas:
-            sugerencias = [k for k in self.formulas.keys() if nombre in k] or [k for k, v in self.aliases.items() if nombre in k]
+            sugerencias = [k for k in self.formulas.keys() if nombre in k] or [
+                k for k, v in self.aliases.items() if nombre in k
+            ]
             sugerencia = f" ¿Quisiste decir `{sugerencias[0]}`?" if sugerencias else ""
             return await ctx.send(embed=self.error_embed(ctx, f"No encontré **{nombre}**.{sugerencia}"))
+
         if m is None:
             return await ctx.send(embed=self.error_embed(
                 ctx, f"Debes especificar la cantidad de millones. Ejemplo: `{ctx.prefix}{ctx.command} {nombre} 100`"
             ))
+
         base, mult, suma, formula, pretty = self.formulas[nombre]
         result = max(0, (m - base) * mult + suma)
         operacion = f"( {m} − {base} ) × {mult} + {suma}"
+
         await ctx.send(embed=self.make_embed(ctx, nombre, formula, operacion, result, pretty))
 
+    # ===============================================================
+    #                   LISTA DE PRECIOS
+    # ===============================================================
     @commands.command(name="helpprices", aliases=["precios", "listaprecios"])
     async def helpprices(self, ctx):
+
         formulas_items = sorted(self.formulas.items(), key=lambda x: x[1][4])
         embeds = []
-        prefixes = ["precio", "valor", "cost", "price"]
-        pages = [formulas_items[i:i + 10] for i in range(0, len(formulas_items), 10)]
+
+        pages = [formulas_items[i:i + 9] for i in range(0, len(formulas_items), 9)]
+        left_arrow = "⬅️"
+        right_arrow = "➡️"
+
         for i, page in enumerate(pages, start=1):
             embed = discord.Embed(
-                title="Lista de Precios Brainrots*",
+                title="📘 Lista de Precios Brainrots",
                 description="Usa: `,precio <alias> <millones>`\nEj: `,precio meowl 300`",
                 color=discord.Color.orange()
             )
+
             for key, (_, _, _, _, pretty) in page:
                 aliases = [a for a, real in self.aliases.items() if real == key]
-                alias_str = f"`{', '.join([key] + aliases[:3])}`" + ("..." if len(aliases) > 3 else "")
-                ejemplos = " | ".join([f"`${p} {aliases[0] if aliases else key} 100`" for p in prefixes[:2]])
+
+                alias_str = ", ".join([f"`{key}`"] + [f"`{a}`" for a in aliases][:4])
+                if len(aliases) > 4:
+                    alias_str += " …"
+
+                ejemplo = aliases[0] if aliases else key
+
                 embed.add_field(
-                    name=f"{pretty}",
-                    value=f"**Alias:** {alias_str}\n**Ej:** {ejemplos}",
+                    name=f"⭐ {pretty}",
+                    value=f"**Alias:** {alias_str}\n**Ejemplo:** `,precio {ejemplo} 100`",
                     inline=False
                 )
+
             embed.set_footer(text=f"Página {i}/{len(pages)} • Total: {len(self.formulas)} ítems")
             embeds.append(embed)
+
         message = await ctx.send(embed=embeds[0])
-        if len(embeds) > 1:
-            await message.add_reaction("Left Arrow")
-            await message.add_reaction("Right Arrow")
-            def check(reaction, user):
-                return user == ctx.author and str(reaction.emoji) in ["Left Arrow", "Right Arrow"] and reaction.message.id == message.id
-            current_page = 0
-            while True:
-                try:
-                    reaction, user = await self.bot.wait_for("reaction_add", timeout=60.0, check=check)
-                except asyncio.TimeoutError:
-                    await message.clear_reactions()
-                    break
-                if str(reaction.emoji) == "Right Arrow" and current_page < len(embeds) - 1:
-                    current_page += 1
-                    await message.edit(embed=embeds[current_page])
-                elif str(reaction.emoji) == "Left Arrow" and current_page > 0:
-                    current_page -= 1
-                    await message.edit(embed=embeds[current_page])
-                try:
-                    await message.remove_reaction(reaction, user)
-                except:
-                    pass
+
+        if len(embeds) == 1:
+            return
+
+        await message.add_reaction(left_arrow)
+        await message.add_reaction(right_arrow)
+
+        current_page = 0
+
+        def check(reaction, user):
+            return (
+                user == ctx.author
+                and reaction.message.id == message.id
+                and str(reaction.emoji) in [left_arrow, right_arrow]
+            )
+
+        while True:
+            try:
+                reaction, user = await self.bot.wait_for("reaction_add", timeout=60, check=check)
+            except asyncio.TimeoutError:
+                await message.clear_reactions()
+                break
+
+            if str(reaction.emoji) == right_arrow and current_page < len(embeds) - 1:
+                current_page += 1
+                await message.edit(embed=embeds[current_page])
+
+            elif str(reaction.emoji) == left_arrow and current_page > 0:
+                current_page -= 1
+                await message.edit(embed=embeds[current_page])
+
+            try:
+                await message.remove_reaction(reaction.emoji, user)
+            except:
+                pass
+
 
 async def setup(bot):
     await bot.add_cog(Precios(bot))
