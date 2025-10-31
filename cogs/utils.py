@@ -15,7 +15,7 @@ class Utils(commands.Cog):
     @commands.command(name="w", aliases=["userinfo", "ui", "user"])
     async def w(self, ctx, member: discord.Member = None):
         member = member or ctx.author
-        user = member._user
+        user = member._user  # Solo para datos globales (banner, flags)
 
         # === BADGES ===
         badges = []
@@ -81,8 +81,8 @@ class Utils(commands.Cog):
         banner_url = user.banner.url if user.banner else None
         avatar_url = member.display_avatar.url
 
-        # === ABOUT ME ===
-        about = user.about or "No tiene descripción."
+        # === ABOUT ME – CORREGIDO: Usa member.about
+        about = member.about or "No tiene descripción."
 
         # === EMBED ===
         embed = discord.Embed(
@@ -202,7 +202,7 @@ class Utils(commands.Cog):
         await ctx.send(embed=embed)
 
     # =====================================================
-    # ,ping → VELOCIDAD DE INTERNET
+    # ,ping → VELOCIDAD REAL
     # =====================================================
     @commands.command()
     async def ping(self, ctx):
@@ -243,7 +243,7 @@ class Utils(commands.Cog):
         await ctx.send(embed=embed)
 
 # =====================================================
-# SETUP OBLIGATORIO
+# SETUP
 # =====================================================
 async def setup(bot):
     await bot.add_cog(Utils(bot))
