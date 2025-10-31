@@ -4,9 +4,8 @@ from discord import app_commands
 import aiohttp
 import json
 import os
-from PIL import Image, ImageDraw, ImageFont
-import io
 import qrcode
+import io
 from typing import Tuple
 
 
@@ -80,73 +79,10 @@ class LTC(commands.Cog):
         return []
 
     def generate_qr(self, address):
-        qr = qrcode.QRCode(version=1, box_size=6, border=3)
+        qr = qrcode.QRCode(version=1, box_size=10, border=4)
         qr.add_data(address)
         qr.make(fit=True)
         img = qr.make_image(fill_color="black", back_color="white")
-        return img.convert("RGBA")
-
-    async def generate_balance_image(self, address: str, confirmed: float, unconfirmed: float, total_received: float,
-                                   usd_price: float, eur_price: float, txs):
-        font_bold = ImageFont.load_default()
-        font_regular = ImageFont.load_default()
-        font_small = ImageFont.load_default()
-        font_mono = ImageFont.load_default()
-
-        width, height = 800, 600
-        img = Image.new("RGBA", (width, height), (30, 33, 39))
-        draw = ImageDraw.Draw(img)
-
-        try:
-            logo = Image.open("assets/ltc_logo.png").convert("RGBA")
-            logo = logo.resize((40, 40), Image.Resampling.LANCZOS)
-            img.paste(logo, (30, 25), logo)
-        except:
-            pass
-
-        draw.text((85, 30), "Litecoin Balance", fill=(255, 255, 255), font=font_bold)
-        draw.text((85, 58), f"Address: {address}", fill=(150, 170, 200), font=font_small)
-
-        def draw_balance_box(x, y, title, ltc, usd, eur):
-            draw.rounded_rectangle([x, y, x+240, y+110], radius=12, fill=(40, 44, 52))
-            draw.text((x+12, y+15), "◆", fill=(52, 152, 219), font=font_bold)
-            draw.text((x+35, y+15), title, fill=(220, 220, 220), font=font_regular)
-            draw.text((x+12, y+50), f"{ltc:,.8f} LTC", fill=(255, 255, 255), font=font_mono)
-            draw.text((x+12, y+75), f"${usd:,.2f} USD", fill=(100, 200, 100), font=font_small)
-            draw.text((x+12, y+95), f"€{eur:,.2f} EUR", fill=(100, 180, 255), font=font_small)
-
-        usd_c, eur_c = confirmed * usd_price, confirmed * eur_price
-        usd_u, eur_u = unconfirmed * usd_price, unconfirmed * eur_price
-        usd_t, eur_t = total_received * usd_price, total_received * eur_price
-        draw_balance_box(50, 130, "Confirmed Balance", confirmed, usd_c, eur_c)
-        draw_balance_box(310, 130, "Unconfirmed Balance", unconfirmed, usd_u, eur_u)
-        draw_balance_box(570, 130, "Total Received", total_received, usd_t, eur_t)
-
-        draw.rounded_rectangle([50, 260, 750, 460], radius=12, fill=(40, 44, 52))
-        draw.text((65, 270), "Last 5 Transactions", fill=(220, 220, 220), font=font_regular)
-        y = 310
-        for tx in txs[:5]:
-            hash_part = tx["hash"]
-            value = tx["value"]
-            usd_val = value * usd_price
-            draw.text((65, y), f"{hash_part}", fill=(180, 180, 180), font=font_mono)
-            draw.text((300, y), f"{value:,.8f} LTC", fill=(255, 255, 255), font=font_mono)
-            draw.text((500, y), f"${usd_val:,.2f} USD", fill=(100, 200, 100), font=font_small)
-            draw.ellipse([650, y+5, 670, y+25], fill=(0, 200, 0))
-            draw.text((680, y), "Received", fill=(180, 255, 180), font=font_small)
-            y += 35
-        if not txs:
-            draw.text((65, 310), "No recent transactions.", fill=(150, 150, 150), font=font_small)
-
-        qr_img = self.generate_qr(address)
-        qr_img = qr_img.resize((120, 120), Image.Resampling.LANCZOS)
-        img.paste(qr_img, (650, 470))
-
-        draw.rounded_rectangle([50, 520, 250, 570], radius=12, fill=(88, 101, 242))
-        draw.text((80, 538), "Get Transaction Info", fill=(255, 255, 255), font=font_regular)
-        draw.rounded_rectangle([280, 520, 520, 570], radius=12, fill=(52, 58, 64), outline=(100, 100, 100), width=2)
-        draw.text((310, 538), "View on Explorer", fill=(200, 200, 200), font=font_regular)
-
         bio = io.BytesIO()
         img.save(bio, "PNG")
         bio.seek(0)
@@ -171,14 +107,14 @@ class LTC(commands.Cog):
         self.addresses[user_id] = address
         self.save_addresses()
 
-        qr_img = self.generate_qr(address)
-        qr_bio = io.BytesIO()
-        qr_img.save(qr_bio, "PNG")
-        qr_bio.seek(0)
+        qr_bio = self.generate_qr(address)
         file = discord.File(qr_bio, "ltc_qr.png")
 
-        embed = discord.Embed(title="Dirección LTC Guardada", color=discord.Color.green())
-        embed.description = f"**Dirección:** `{address}`\nUsa `/mybal` para ver tu balance."
+        embed = discord.Embed(
+            title="Dirección LTC Guardada",
+            description=f"**Dirección:** `{address}`\nUsa `/mybal` para ver tu balance.",
+            color=discord.Color.green()
+        )
         embed.set_image(url="attachment://ltc_qr.png")
         embed.set_footer(text=f"Guardado por {interaction.user.display_name}")
 
@@ -211,33 +147,71 @@ class LTC(commands.Cog):
             await interaction.followup.send(embed=error)
             return
 
-        img_bio = await self.generate_balance_image(address, confirmed, unconfirmed, total_received, usd, eur, txs)
-        file = discord.File(img_bio, filename="ltc_balance.png")
+        # === EMBED DE TEXTO PLANO ===
+        embed = discord.Embed(
+            title="Balance LTC",
+            color=discord.Color.from_rgb(52, 152, 219)
+        )
 
-        embed = discord.Embed(title="Balance LTC", color=discord.Color.from_rgb(52, 152, 219))
-        embed.set_image(url="attachment://ltc_balance.png")
+        # Dirección
+        embed.add_field(name="Dirección", value=f"`{address}`", inline=False)
+
+        # Balances
+        embed.add_field(
+            name="Confirmed Balance",
+            value=f"**{confirmed:,.8f} LTC**\n"
+                  f"${confirmed * usd:,.2f} USD\n"
+                  f"€{confirmed * eur:,.2f} EUR",
+            inline=True
+        )
+        embed.add_field(
+            name="Unconfirmed Balance",
+            value=f"**{unconfirmed:,.8f} LTC**\n"
+                  f"${unconfirmed * usd:,.2f} USD\n"
+                  f"€{unconfirmed * eur:,.2f} EUR",
+            inline=True
+        )
+        embed.add_field(
+            name="Total Received",
+            value=f"**{total_received:,.8f} LTC**\n"
+                  f"${total_received * usd:,.2f} USD\n"
+                  f"€{total_received * eur:,.2f} EUR",
+            inline=True
+        )
+
+        # Transacciones
+        tx_text = ""
+        for tx in txs[:5]:
+            tx_text += f"`{tx['hash']}` → **{tx['value']:.8f} LTC** (${tx['value'] * usd:.2f})\n"
+        if not tx_text:
+            tx_text = "*Sin transacciones recientes.*"
+
+        embed.add_field(name="Últimas 5 Transacciones", value=tx_text, inline=False)
+
+        # QR
+        qr_bio = self.generate_qr(address)
+        file = discord.File(qr_bio, "ltc_qr.png")
+        embed.set_image(url="attachment://ltc_qr.png")
+
+        # Footer
         embed.set_footer(text=f"Balance de {interaction.user.display_name}")
 
+        # Botones
         view = discord.ui.View(timeout=None)
-        # EMOJIS REALES
         view.add_item(discord.ui.Button(
-            label="Get Transaction Info", url=f"https://blockchair.com/litecoin/address/{address}", emoji="ℹ️"
+            label="Get Transaction Info", url=f"https://blockchair.com/litecoin/address/{address}", emoji="i"
         ))
         view.add_item(discord.ui.Button(
-            label="View on Explorer", url=f"https://blockchair.com/litecoin/address/{address}", emoji="🔍"
+            label="View on Explorer", url=f"https://blockchair.com/litecoin/address/{address}", emoji="Search"
         ))
 
         await interaction.followup.send(embed=embed, file=file, view=view)
 
-    # CIERRA LA SESIÓN AL DESMONTAR
     async def cog_unload(self):
         await self.session.close()
 
 
-# =====================================================
-# SETUP
-# =====================================================
 async def setup(bot):
     cog = LTC(bot)
     await bot.add_cog(cog)
-    print("Cog 'ltc' cargado correctamente (PÚBLICO + CORREGIDO)")
+    print("Cog 'ltc' cargado (TEXTO PLANO + QR)")
