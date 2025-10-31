@@ -15,17 +15,17 @@ class LTC(commands.Cog):
         self.file_path = "ltc_addresses.json"
         self.addresses = self.load_addresses()
 
-        # Emojis personalizados del servidor
+        # ✅ Emojis personalizados del servidor (FUNCIONAN)
         self.emoji_flecha = "<:flecha:1433716388022718575>"
         self.emoji_ltc = "<:ltc:1433716731074969600>"
 
-        # Emojis Unicode estándar
+        # ✅ Emojis genéricos
         self.emoji_point = "🔹"
         self.emoji_received = "🟢"
         self.emoji_sent = "🔴"
 
     # ==================================================================================
-    # Cargar y guardar direcciones
+    # Cargar / Guardar direcciones
     # ==================================================================================
     def load_addresses(self):
         if os.path.exists(self.file_path):
@@ -41,7 +41,7 @@ class LTC(commands.Cog):
             json.dump(self.addresses, f, indent=2)
 
     # ==================================================================================
-    # API: Obtener precio LTC en USD/EUR
+    # API PRECIO LTC
     # ==================================================================================
     async def get_ltc_price(self):
         try:
@@ -55,7 +55,7 @@ class LTC(commands.Cog):
         return 75.0, 69.0  # fallback
 
     # ==================================================================================
-    # API: Balance de una wallet LTC
+    # API BALANCE LTC
     # ==================================================================================
     async def get_ltc_balance(self, address):
         try:
@@ -73,7 +73,7 @@ class LTC(commands.Cog):
         return None, None, None
 
     # ==================================================================================
-    # API: Últimas transacciones
+    # API TRANSACCIONES
     # ==================================================================================
     async def get_ltc_transactions(self, address):
         try:
@@ -82,9 +82,10 @@ class LTC(commands.Cog):
                 if resp.status == 200:
                     data = await resp.json()
                     txs = data.get("txs", [])[:5]
-                    formatted = []
 
+                    formatted = []
                     for tx in txs:
+                        # Valor recibido (positivo) o enviado (negativo)
                         value = sum(
                             o.get("value", 0) for o in tx.get("outputs", [])
                             if o.get("addresses") and address in o["addresses"]
@@ -105,13 +106,21 @@ class LTC(commands.Cog):
         return []
 
     # ==================================================================================
-    # GENERAR QR
+    # GENERAR QR — pequeño, sin fondo blanco ✅
     # ==================================================================================
     def generate_qr(self, address):
-        qr = qrcode.QRCode(version=1, box_size=10, border=4)
+        qr = qrcode.QRCode(
+            version=1,
+            box_size=3,   # tamaño pequeño
+            border=1      # borde mínimo
+        )
+
         qr.add_data(address)
         qr.make(fit=True)
-        img = qr.make_image(fill_color="black", back_color="white")
+
+        # ✅ QR NEGRO + fondo transparente
+        img = qr.make_image(fill_color="black", back_color=None)
+
         bio = io.BytesIO()
         img.save(bio, "PNG")
         bio.seek(0)
@@ -123,8 +132,9 @@ class LTC(commands.Cog):
     @app_commands.command(name="setltc", description="Guarda tu dirección LTC")
     async def setltc(self, interaction: discord.Interaction, address: str):
         address = address.strip()
+
         if not (address.startswith("L") or address.startswith("M")) or len(address) < 26:
-            await interaction.response.send_message("Dirección inválida. Debe iniciar con L o M.")
+            await interaction.response.send_message("Dirección inválida. Debe iniciar en **L** o **M**.")
             return
 
         self.addresses[str(interaction.user.id)] = address
@@ -135,7 +145,7 @@ class LTC(commands.Cog):
 
         embed = discord.Embed(
             title=f"{self.emoji_ltc} Dirección Guardada",
-            description=f"`{address}`\nUsa `/mybal` para ver tu balance.",
+            description=f"`{address}`\nAhora usa **/mybal** para ver tu balance.",
             color=0x2ecc71
         )
         embed.set_image(url="attachment://qr.png")
@@ -143,9 +153,9 @@ class LTC(commands.Cog):
         await interaction.response.send_message(embed=embed, file=file)
 
     # ==================================================================================
-    # /mybal
+    # /mybal — PANEL COMPLETO IGUAL A LA IMAGEN ✅
     # ==================================================================================
-    @app_commands.command(name="mybal", description="Muestra tu balance LTC con formato avanzado")
+    @app_commands.command(name="mybal", description="Muestra tu balance LTC con estilo avanzado")
     async def mybal(self, interaction: discord.Interaction):
         user_id = str(interaction.user.id)
         address = self.addresses.get(user_id)
@@ -161,7 +171,7 @@ class LTC(commands.Cog):
         txs = await self.get_ltc_transactions(address)
 
         if confirmed is None:
-            await interaction.followup.send("Error al obtener el balance.")
+            await interaction.followup.send("Error al obtener los datos.")
             return
 
         embed = discord.Embed(
@@ -169,31 +179,30 @@ class LTC(commands.Cog):
             color=0x3498db
         )
 
-        # Dirección con flechita
         embed.add_field(
             name=f"{self.emoji_flecha} Address:",
             value=f"[`{address}`](https://blockchair.com/litecoin/address/{address})",
             inline=False
         )
 
-        # Balances
         embed.add_field(
             name=f"{self.emoji_point} Confirmed Balance",
             value=f"**{confirmed:,.8f} LTC** | ${confirmed*usd:,.2f} USD\n€{confirmed*eur:,.2f} EUR",
             inline=True
         )
+
         embed.add_field(
             name=f"{self.emoji_point} Unconfirmed Balance",
             value=f"**{unconfirmed:,.8f} LTC** | ${unconfirmed*usd:,.2f} USD\n€{unconfirmed*eur:,.2f} EUR",
             inline=True
         )
+
         embed.add_field(
             name=f"{self.emoji_point} Total Received",
             value=f"**{total:,.8f} LTC** | ${total*usd:,.2f} USD\n€{total*eur:,.2f} EUR",
             inline=True
         )
 
-        # Transacciones
         tx_block = ""
         for tx in txs:
             tx_block += (
@@ -208,12 +217,10 @@ class LTC(commands.Cog):
             inline=False
         )
 
-        # QR
         qr = self.generate_qr(address)
         file = discord.File(qr, "qr.png")
         embed.set_image(url="attachment://qr.png")
 
-        # Botones
         view = discord.ui.View(timeout=None)
 
         view.add_item(discord.ui.Button(
