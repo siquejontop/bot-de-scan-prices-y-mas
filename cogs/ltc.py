@@ -4,7 +4,7 @@ from discord import app_commands
 import aiohttp
 import json
 import os
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageDraw, ImageFont
 import io
 import qrcode
 from typing import Tuple
@@ -86,38 +86,42 @@ class LTC(commands.Cog):
         img = qr.make_image(fill_color="black", back_color="white")
         return img.convert("RGBA")
 
+    # === AHORA ES ASYNC Y USA AWAIT ===
     async def generate_balance_image(self, address: str, confirmed: float, unconfirmed: float, total_received: float,
                                    usd_price: float, eur_price: float, txs):
-        # === CARGAR FUENTES ===
-        try:
-            font_bold = ImageFont.truetype("fonts/Inter-Bold.ttf", 20)
-            font_regular = ImageFont.truetype("fonts/Inter-Regular.ttf", 18)
-            font_small = ImageFont.truetype("fonts/Inter-Regular.ttf", 16)
-            font_mono = ImageFont.truetype("fonts/JetBrainsMono-Regular.ttf", 16)
-        except:
-            font_bold = ImageFont.load_default()
-            font_regular = font_bold
-            font_small = font_bold
-            font_mono = font_bold
+        # === CARGAR FUENTES (en executor para no bloquear) ===
+        loop = self.bot.loop
+        font_bold = await loop.run_in_executor(None, ImageFont.truetype, "fonts/Inter-Bold.ttf", 20)
+        font_regular = await loop.run_in_executor(None, ImageFont.truetype, "fonts/Inter-Regular.ttf", 18)
+        font_small = await loop.run_in_executor(None, ImageFont.truetype, "fonts/Inter-Regular.ttf", 16)
+        font_mono = await loop.run_in_executor(None, ImageFont.truetype, "fonts/JetBrainsMono-Regular.ttf", 16)
 
-        # === DIMENSIONES ===
+        # === FALLBACK ===
+        try:
+            pass
+        except:
+            default = ImageFont.load_default()
+            font_bold = font_regular = font_small = font_mono = default
+
+        # === IMAGEN ===
         width, height = 800, 600
         img = Image.new("RGBA", (width, height), (30, 33, 39))
         draw = ImageDraw.Draw(img)
 
-        # === LOGO LITE //
+        # === LOGO ===
         try:
-            logo = Image.open("assets/ltc_logo.png").convert("RGBA")
+            logo = await loop.run_in_executor(None, Image.open, "assets/ltc_logo.png")
+            logo = logo.convert("RGBA")
             logo = logo.resize((40, 40), Image.Resampling.LANCZOS)
             img.paste(logo, (30, 25), logo)
         except:
-            pass  # sin logo
+            pass
 
         # === TÍTULO ===
         draw.text((85, 30), "Litecoin Balance", fill=(255, 255, 255), font=font_bold)
         draw.text((85, 58), f"Address: {address}", fill=(150, 170, 200), font=font_small)
 
-        # === BALANCES ===
+        # === BALANCE BOX ===
         def draw_balance_box(x, y, title, ltc, usd, eur):
             draw.rounded_rectangle([x, y, x+240, y+110], radius=12, fill=(40, 44, 52))
             draw.text((x+12, y+15), "◆", fill=(52, 152, 219), font=font_bold)
@@ -150,12 +154,12 @@ class LTC(commands.Cog):
         if not txs:
             draw.text((65, 310), "No recent transactions.", fill=(150, 150, 150), font=font_small)
 
-        # === QR CODE ===
+        # === QR ===
         qr_img = self.generate_qr(address)
         qr_img = qr_img.resize((120, 120), Image.Resampling.LANCZOS)
         img.paste(qr_img, (650, 470))
 
-        # === BOTONES ===
+        # === BOTONES (solo visual) ===
         draw.rounded_rectangle([50, 520, 250, 570], radius=12, fill=(88, 101, 242))
         draw.text((80, 538), "Get Transaction Info", fill=(255, 255, 255), font=font_regular)
         draw.rounded_rectangle([280, 520, 520, 570], radius=12, fill=(52, 58, 64), outline=(100, 100, 100), width=2)
@@ -175,11 +179,13 @@ class LTC(commands.Cog):
     async def setltc(self, interaction: discord.Interaction, address: str):
         address = address.strip()
         if not (address.startswith("L") or address.startswith("M")) or len(address) < 26:
-            return await interaction.response.send_message(
+            await interaction.response.send_message(
                 "Dirección LTC inválida. Debe empezar con `L` o `M`."
-            )  # ← Público
+            )
+            return
 
-        await interaction.response.defer()  # ← Público
+        # === DEFER PARA TIEMPO ===
+        await interaction.response.defer()
 
         user_id = str(interaction.user.id)
         self.addresses[user_id] = address
@@ -196,7 +202,7 @@ class LTC(commands.Cog):
         embed.set_image(url="attachment://ltc_qr.png")
         embed.set_footer(text=f"Guardado por {interaction.user.display_name}")
 
-        await interaction.followup.send(embed=embed, file=file)  # ← Público
+        await interaction.followup.send(embed=embed, file=file)
 
     # =====================================================
     # /mybal
@@ -206,14 +212,16 @@ class LTC(commands.Cog):
         user_id = str(interaction.user.id)
         address = self.addresses.get(user_id)
         if not address:
-            return await interaction.response.send_message(
+            await interaction.response.send_message(
                 "No has establecido tu dirección. Usa `/setltc <dirección>` primero."
-            )  # ← Público
+            )
+            return
 
-        await interaction.response.defer()  # ← Público
+        await interaction.response.defer()
 
+        # === CARGANDO ===
         loading = discord.Embed(title="Cargando balance LTC...", color=discord.Color.blue())
-        await interaction.followup.send(embed=loading)  # ← Público
+        await interaction.followup.send(embed=loading)
 
         # === DATOS ===
         usd, eur = await self.get_ltc_price()
@@ -222,12 +230,11 @@ class LTC(commands.Cog):
 
         if confirmed is None:
             error = discord.Embed(title="Error", description="No se pudo obtener el balance.", color=discord.Color.red())
-            return await interaction.followup.send(embed=error)  # ← Público
+            await interaction.followup.send(embed=error)
+            return
 
-        # === GENERAR IMAGEN ===
-        img_bio = await self.bot.loop.run_in_executor(
-            None, self.generate_balance_image, address, confirmed, unconfirmed, total_received, usd, eur, txs
-        )
+        # === GENERAR IMAGEN (con await!) ===
+        img_bio = await self.generate_balance_image(address, confirmed, unconfirmed, total_received, usd, eur, txs)
         file = discord.File(img_bio, filename="ltc_balance.png")
 
         # === ENVIAR ===
@@ -243,7 +250,7 @@ class LTC(commands.Cog):
             label="View on Explorer", url=f"https://blockchair.com/litecoin/address/{address}", emoji="Search"
         ))
 
-        await interaction.followup.send(embed=embed, file=file, view=view)  # ← Público
+        await interaction.followup.send(embed=embed, file=file, view=view)
 
 
 # =====================================================
@@ -251,4 +258,4 @@ class LTC(commands.Cog):
 # =====================================================
 async def setup(bot):
     await bot.add_cog(LTC(bot))
-    print("Cog 'ltc' cargado correctamente (MODO PÚBLICO)")
+    print("Cog 'ltc' cargado correctamente (PÚBLICO + CORREGIDO)")
