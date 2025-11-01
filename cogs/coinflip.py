@@ -165,7 +165,7 @@ class Games(commands.Cog):
         )
         embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/992/992703.png")
         embed.set_footer(
-            text="Inspirado en Carl-bot | Usa ,coinflip para volver a jugar",
+            text="Usa ,coinflip para volver a jugar",
             icon_url=ctx.author.avatar.url if ctx.author.avatar else discord.utils.MISSING
         )
         await ctx.send(embed=embed)
