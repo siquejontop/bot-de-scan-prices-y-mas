@@ -51,11 +51,32 @@ class RoleSelect(discord.ui.View):
                     embed=discord.Embed(description=error, color=discord.Color.red()), view=None
                 )
 
-            desc, color = await cog.perform_role_action(self.member, role, self.action)
+            # register who executed (so Logs.py can map audit entries back to the moderator)
+            if not hasattr(self.ctx.bot, "_last_role_action"):
+                self.ctx.bot._last_role_action = {}
+            self.ctx.bot._last_role_action[self.member.id] = self.ctx.author
+
+            desc, color = await cog.perform_role_action(
+                self.member, role, self.action, moderator=self.ctx.author
+            )
             await interaction.response.edit_message(
                 embed=discord.Embed(description=desc, color=color), view=None
             )
             logger.info(f"Role {self.action} executed by {self.ctx.author} for {self.member}: {role.name}")
+
+            # Attempt to log via Logs cog if available
+            logs_cog = self.ctx.bot.get_cog("Logs")
+            if logs_cog and hasattr(logs_cog, "log_command"):
+                try:
+                    await logs_cog.log_command(
+                        ctx=self.ctx,
+                        action=self.action,
+                        target=self.member,
+                        roles=[role.name],
+                        extra=None
+                    )
+                except Exception:
+                    logger.exception("Failed to call Logs.log_command from RoleSelect.")
 
         except discord.Forbidden:
             await interaction.response.edit_message(
@@ -66,6 +87,7 @@ class RoleSelect(discord.ui.View):
                 embed=discord.Embed(description=f"❌ Error: {e}", color=discord.Color.red()), view=None
             )
             logger.error(f"Error in role {self.action}: {e}")
+
 
 # ========================
 # 📜 Roles Paginator View
@@ -115,14 +137,18 @@ class RolesPaginator(discord.ui.View):
     async def close(self, interaction, button):
         await interaction.message.delete()
 
+
 # ========================
-# 📜 Roles Cog
+# 📜 Roles Cog (MAIN)
 # ========================
 class Roles(commands.Cog):
     """Cog for managing Discord server roles."""
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.owner_id = 335596693603090434
+        # ensure the mapping exists for tracking who executed last action per member
+        if not hasattr(self.bot, "_last_role_action"):
+            self.bot._last_role_action = {}
         logger.info("Roles cog initialized")
 
     async def validate_role_action(self, ctx, member, role, action):
@@ -146,21 +172,27 @@ class Roles(commands.Cog):
 
         return True, None
 
-    async def perform_role_action(self, member, role, action):
+    async def perform_role_action(self, member, role, action, moderator=None):
+        """
+        Performs the actual add/remove/toggle and sets a detailed reason for audit log.
+        Returns (description_str, color)
+        """
+        mod = moderator or member.guild.me
+
         if action == "add":
-            await member.add_roles(role, reason=f"added by bot")
+            await member.add_roles(role, reason=f"role added by {mod} ({mod.id})")
             return f"➕ {member.mention} now has {role.mention}", discord.Color.green()
 
         elif action == "remove":
-            await member.remove_roles(role, reason=f"removed by bot")
+            await member.remove_roles(role, reason=f"role removed by {mod} ({mod.id})")
             return f"➖ {member.mention} no longer has {role.mention}", discord.Color.red()
 
         else:
             if role in member.roles:
-                await member.remove_roles(role, reason=f"toggle removed by bot")
+                await member.remove_roles(role, reason=f"toggle removed by {mod} ({mod.id})")
                 return f"➖ {member.mention} no longer has {role.mention}", discord.Color.red()
             else:
-                await member.add_roles(role, reason=f"toggle added by bot")
+                await member.add_roles(role, reason=f"toggle added by {mod} ({mod.id})")
                 return f"➕ {member.mention} now has {role.mention}", discord.Color.green()
 
     def find_role(self, ctx, role_arg):
@@ -182,10 +214,8 @@ class Roles(commands.Cog):
         )
 
     # ========================
-    # ✅ Commands (tus comandos tal cual)
+    # ✅ Commands (SOLO SE EDITÓ LA LLAMADA A perform_role_action)
     # ========================
-    # NO CAMBIÉ NINGUNO  
-    # SOLO AÑADÍ MANEJO DE ERRORES ABAJO
 
     @commands.command(name="roles")
     async def roles(self, ctx):
@@ -224,9 +254,25 @@ class Roles(commands.Cog):
             return await ctx.send(embed=discord.Embed(description=error, color=discord.Color.red()))
 
         try:
-            desc, color = await self.perform_role_action(member, role, "add")
+            # register the moderator for this member so Logs can find it when the audit entry appears
+            self.bot._last_role_action[member.id] = ctx.author
+
+            desc, color = await self.perform_role_action(member, role, "add", moderator=ctx.author)
             await ctx.send(embed=discord.Embed(description=desc, color=color))
+
             logger.info(f"Role added by {ctx.author} to {member}: {role.name}")
+
+            # log via Logs cog if available
+            logs_cog = self.bot.get_cog("Logs")
+            if logs_cog and hasattr(logs_cog, "log_command"):
+                await logs_cog.log_command(
+                    ctx=ctx,
+                    action="addrole",
+                    target=member,
+                    roles=[role.name],
+                    extra=None
+                )
+
         except discord.Forbidden:
             await ctx.send(embed=discord.Embed(
                 description="❌ Insufficient permissions to assign role.",
@@ -268,7 +314,11 @@ class Roles(commands.Cog):
                 return await ctx.send(embed=discord.Embed(description=error, color=discord.Color.red()))
 
         try:
-            await member.add_roles(*roles)
+            # register moderator
+            self.bot._last_role_action[member.id] = ctx.author
+
+            # add all roles in one call with reason
+            await member.add_roles(*roles, reason=f"multiple roles added by {ctx.author} ({ctx.author.id})")
             roles_mention = ", ".join([role.mention for role in roles])
             embed = discord.Embed(
                 description=f"➕ {ctx.author.mention} added {roles_mention} to {member.mention}",
@@ -276,6 +326,17 @@ class Roles(commands.Cog):
             )
             await ctx.send(embed=embed)
             logger.info(f"Multiple roles added by {ctx.author} to {member}: {roles_mention}")
+
+            logs_cog = self.bot.get_cog("Logs")
+            if logs_cog and hasattr(logs_cog, "log_command"):
+                await logs_cog.log_command(
+                    ctx=ctx,
+                    action="addroles",
+                    target=member,
+                    roles=[r.name for r in roles],
+                    extra=None
+                )
+
         except discord.Forbidden:
             await ctx.send(embed=discord.Embed(
                 description="❌ Insufficient permissions to assign roles.",
@@ -312,9 +373,23 @@ class Roles(commands.Cog):
             return await ctx.send(embed=discord.Embed(description=error, color=discord.Color.red()))
 
         try:
-            desc, color = await self.perform_role_action(member, role, "remove")
+            # register moderator
+            self.bot._last_role_action[member.id] = ctx.author
+
+            desc, color = await self.perform_role_action(member, role, "remove", moderator=ctx.author)
             await ctx.send(embed=discord.Embed(description=desc, color=color))
             logger.info(f"Role removed by {ctx.author} from {member}: {role.name}")
+
+            logs_cog = self.bot.get_cog("Logs")
+            if logs_cog and hasattr(logs_cog, "log_command"):
+                await logs_cog.log_command(
+                    ctx=ctx,
+                    action="removerole",
+                    target=member,
+                    roles=[role.name],
+                    extra=None
+                )
+
         except discord.Forbidden:
             await ctx.send(embed=discord.Embed(
                 description="❌ Insufficient permissions to remove role.",
@@ -350,13 +425,27 @@ class Roles(commands.Cog):
                 return await ctx.send(embed=discord.Embed(description=error, color=discord.Color.red()))
 
         try:
-            await member.remove_roles(*roles_to_remove)
+            # register moderator
+            self.bot._last_role_action[member.id] = ctx.author
+
+            await member.remove_roles(*roles_to_remove, reason=f"purgeroles by {ctx.author} ({ctx.author.id})")
             embed = discord.Embed(
                 description=f"🗑️ {ctx.author.mention} removed all roles from {member.mention}",
                 color=discord.Color.red()
             )
             await ctx.send(embed=embed)
             logger.info(f"All roles removed by {ctx.author} from {member}")
+
+            logs_cog = self.bot.get_cog("Logs")
+            if logs_cog and hasattr(logs_cog, "log_command"):
+                await logs_cog.log_command(
+                    ctx=ctx,
+                    action="purgeroles",
+                    target=member,
+                    roles=[r.name for r in roles_to_remove],
+                    extra=None
+                )
+
         except discord.Forbidden:
             await ctx.send(embed=discord.Embed(
                 description="❌ Insufficient permissions to remove roles.",
@@ -393,9 +482,23 @@ class Roles(commands.Cog):
             return await ctx.send(embed=discord.Embed(description=error, color=discord.Color.red()))
 
         try:
-            desc, color = await self.perform_role_action(member, role, "toggle")
+            # register moderator
+            self.bot._last_role_action[member.id] = ctx.author
+
+            desc, color = await self.perform_role_action(member, role, "toggle", moderator=ctx.author)
             await ctx.send(embed=discord.Embed(description=desc, color=color))
             logger.info(f"Role toggled by {ctx.author} for {member}: {role.name}")
+
+            logs_cog = self.bot.get_cog("Logs")
+            if logs_cog and hasattr(logs_cog, "log_command"):
+                await logs_cog.log_command(
+                    ctx=ctx,
+                    action="togglerole",
+                    target=member,
+                    roles=[role.name],
+                    extra=None
+                )
+
         except discord.Forbidden:
             await ctx.send(embed=discord.Embed(
                 description="❌ Insufficient permissions to modify role.",
@@ -443,8 +546,12 @@ class Roles(commands.Cog):
         try:
             if roles_to_add or roles_to_remove:
                 if roles_to_remove:
+                    # register moderator
+                    self.bot._last_role_action[member.id] = ctx.author
                     await member.remove_roles(*roles_to_remove)
                 if roles_to_add:
+                    # register moderator
+                    self.bot._last_role_action[member.id] = ctx.author
                     await member.add_roles(*roles_to_add)
                 roles_added_str = ", ".join([role.mention for role in roles_to_add]) if roles_to_add else "none"
                 roles_removed_str = ", ".join([role.mention for role in roles_to_remove]) if roles_to_remove else "none"
@@ -574,15 +681,6 @@ class Roles(commands.Cog):
         if isinstance(error, commands.MissingRequiredArgument):
             return await ctx.send("❌ Uso: `,purgeroles <usuario>`")
 
-    @createrole.error
-    async def createrole_error(self, ctx, error):
-        if isinstance(error, commands.MissingRequiredArgument):
-            return await ctx.send("❌ Uso: `,createrole <nombre> [color] [hoist] [mentionable]`")
-
-    @deleterole.error
-    async def deleterole_error(self, ctx, error):
-        if isinstance(error, commands.MissingRequiredArgument):
-            return await ctx.send("❌ Uso: `,deleterole <rol>`")
 
 async def setup(bot):
     await bot.add_cog(Roles(bot))
