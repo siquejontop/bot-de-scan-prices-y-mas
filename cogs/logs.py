@@ -76,7 +76,7 @@ class Logs(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.logger = logging.getLogger(LOGGER_NAME)
-        self.last_sent = {}  
+        self.last_sent = {}
         self.logger.debug("✅ Cog de logs inicializado correctamente.")
 
     # ======================
@@ -189,14 +189,31 @@ class Logs(commands.Cog):
         if not ch:
             return
 
-        # quién hizo el cambio
+        # Intenta obtener la entrada de auditoría más reciente para member_role_update
+        entry = None
         try:
             entry = (await after.guild.audit_logs(
                 limit=1,
                 action=discord.AuditLogAction.member_role_update
             ).flatten())[0]
-            moderator = entry.user
-        except:
+        except Exception:
+            entry = None
+
+        # Si la entrada fue hecha por el bot (porque el bot aplicó el cambio),
+        # intentamos recuperar quién ejecutó la acción desde bot._last_role_action
+        moderator = None
+        try:
+            if entry and entry.user and entry.user.id == self.bot.user.id:
+                moderator = None
+                if hasattr(self.bot, "_last_role_action"):
+                    moderator = self.bot._last_role_action.pop(after.id, None)
+            else:
+                moderator = entry.user if entry else None
+        except Exception:
+            moderator = entry.user if entry else None
+
+        # fallback
+        if not moderator:
             moderator = "Desconocido"
 
         added = list(set(after.roles) - set(before.roles))
@@ -215,7 +232,7 @@ class Logs(commands.Cog):
         c = 1
         if added:
             embed.add_field(
-                name=f"{c:02d} – Added Roles",
+                name=f"{c:02d} – With reason {(' '.join(['toggle' if 'toggle' in r.name.lower() else 'Added' for r in added]))}",
                 value="\n".join([r.name for r in added]),
                 inline=False
             )
@@ -254,6 +271,40 @@ class Logs(commands.Cog):
             discord.Color.red()
         )
 
+        await self._safe_send(ch, embed)
+
+    # ===========================================================
+    # ✅ NEW: LOGGING DE COMANDOS (INTERFAZ PARA COGS)
+    # ===========================================================
+    async def log_command(self, ctx: commands.Context, action: str, target: discord.Member = None, roles: list = None, extra: str = None):
+        """
+        Interfaz para que otros cogs (ej. roles.py) registren acciones en el canal de logs.
+        ctx: contexto del comando que ejecutó la acción
+        action: short string e.g. "addrole", "togglerole"
+        target: miembro afectado
+        roles: list of role names involved
+        extra: texto adicional
+        """
+        ch = self._find_log_channel(ctx.guild)
+        if not ch:
+            return
+
+        moderator = ctx.author
+        desc_lines = [
+            f"**Usuario (Moderador):** {moderator} (`{moderator.id}`)",
+        ]
+        if target:
+            desc_lines.append(f"**Objetivo:** {target} (`{target.id}`)")
+        if roles:
+            desc_lines.append(f"**Roles:** {', '.join(roles)}")
+        if extra:
+            desc_lines.append(f"**Info:** {extra}")
+
+        embed = self._embed(
+            f"🔧 Command executed: {action}",
+            "\n".join(desc_lines),
+            discord.Color.blurple()
+        )
         await self._safe_send(ch, embed)
 
     # ===========================================================
